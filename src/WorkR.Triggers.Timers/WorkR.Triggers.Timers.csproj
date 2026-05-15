@@ -4,6 +4,7 @@
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Timer-based triggers for WorkR, supporting delay-based and cron-scheduled background workers.</Description>
   </PropertyGroup>
 
   <ItemGroup>

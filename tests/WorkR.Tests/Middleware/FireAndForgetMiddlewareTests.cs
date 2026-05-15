@@ -45,21 +45,38 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrowsOperationCanceledException_DoesNotLog()
+        public async Task Execute_WhenNextThrowsOperationCanceledException_DuringShutdown_DoesNotLog()
         {
+            using var cts = new CancellationTokenSource();
             var logger = new FakeLogger<FireAndForgetMiddleware>();
             var middleware = new FireAndForgetMiddleware(logger);
             var nextDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            await middleware.Execute(async _ =>
+            await middleware.Execute(_ =>
             {
-                try { throw new OperationCanceledException(); }
-                finally { nextDone.TrySetResult(); }
-            }, TestContext.Current.CancellationToken);
+                cts.Cancel();
+                nextDone.TrySetResult();
+                return Task.FromException(new OperationCanceledException());
+            }, cts.Token);
 
             await nextDone.Task.WaitAsync(TestContext.Current.CancellationToken);
 
             logger.Collector.GetSnapshot().ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task Execute_WhenNextThrowsOperationCanceledException_WithoutShutdown_LogsError()
+        {
+            var logger = new SignalOnLogLogger();
+            var middleware = new FireAndForgetMiddleware(logger);
+            var exception = new OperationCanceledException();
+
+            await middleware.Execute(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
+            await logger.WhenLogged.WaitAsync(TestContext.Current.CancellationToken);
+
+            var log = logger.Collector.GetSnapshot().ShouldHaveSingleItem();
+            log.Level.ShouldBe(LogLevel.Error);
+            log.Exception.ShouldBeSameAs(exception);
         }
 
         private sealed class SignalOnLogLogger : ILogger<FireAndForgetMiddleware>

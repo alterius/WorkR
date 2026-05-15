@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <Description>Core interfaces and abstractions for the WorkR background worker framework.</Description>
   </PropertyGroup>
 
 </Project>
