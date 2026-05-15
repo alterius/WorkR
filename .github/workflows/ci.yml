@@ -25,6 +25,10 @@ jobs:
             9.x
             10.x
 
+      - name: Nerdbank.GitVersioning
+        id: nbgv
+        uses: dotnet/nbgv@master
+
       - name: Restore
         run: dotnet restore WorkR.slnx
 
@@ -32,7 +36,7 @@ jobs:
         run: dotnet build WorkR.slnx --no-restore --configuration Release
 
       - name: Report version
-        run: echo "## v${NBGV_NuGetPackageVersion}" >> $GITHUB_STEP_SUMMARY
+        run: echo "## v${{ steps.nbgv.outputs.NuGetPackageVersion }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Test
         run: dotnet test WorkR.slnx --no-build --configuration Release --logger trx --results-directory ./test-results
