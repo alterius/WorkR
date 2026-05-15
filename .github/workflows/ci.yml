@@ -31,6 +31,9 @@ jobs:
       - name: Build
         run: dotnet build WorkR.slnx --no-restore --configuration Release
 
+      - name: Report version
+        run: echo "## v${NBGV_NuGetPackageVersion}" >> $GITHUB_STEP_SUMMARY
+
       - name: Test
         run: dotnet test WorkR.slnx --no-build --configuration Release --logger trx --results-directory ./test-results
 
