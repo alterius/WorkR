@@ -28,12 +28,16 @@ namespace WorkR.Triggers.Timers
 
             async Task Next(DateTimeOffset timestamp)
             {
+                _logger.LogDebug("Timer trigger executing...");
+
                 var signal = new TimerSignal
                 {
                     TriggerTimestamp = timestamp
                 };
 
                 await next(signal, stoppingToken);
+
+                _logger.LogDebug("Timer trigger executed");
             }
 
             if (_runOnStartup)
@@ -46,6 +50,8 @@ namespace WorkR.Triggers.Timers
                 var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 var nextOccurrenceUtc = _schedule.GetNextOccurrence(nowUtc);
                 var delay = nextOccurrenceUtc - nowUtc;
+
+                _logger.LogInformation("Timer trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
 
                 await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                 await Next(nextOccurrenceUtc).ConfigureAwait(false);
