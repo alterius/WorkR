@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace WorkR
+namespace WorkR.Triggers.RunOnce
 {
     public sealed class RunOnceTrigger : ITrigger<EmptyTriggerContext>
     {
