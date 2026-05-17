@@ -23,7 +23,7 @@ namespace WorkR.Triggers.RunOnce
             var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
             await next(context, stoppingToken).ConfigureAwait(false);
             
-            _logger.LogInformation("Run once trigger executed");
+            _logger.LogInformation("Run once trigger completed");
         }
     }
 }

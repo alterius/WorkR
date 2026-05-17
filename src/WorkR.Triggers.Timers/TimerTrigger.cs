@@ -53,6 +53,8 @@ namespace WorkR.Triggers.Timers
                 await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                 await Next(nextOccurrenceUtc).ConfigureAwait(false);
             }
+
+            _logger.LogInformation("Timer trigger completed");
         }
     }
 }

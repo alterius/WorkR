@@ -26,11 +26,17 @@ namespace WorkR.Triggers.Timers
             while (!stoppingToken.IsCancellationRequested)
             {
                 var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
-                
+
+                _logger.LogDebug("Delay trigger executing...");
+
                 await next(context, stoppingToken).ConfigureAwait(false);
+
+                _logger.LogDebug("Delay trigger executed");
 
                 await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
             }
+
+            _logger.LogInformation("Delay trigger completed");
         }
     }
 }
