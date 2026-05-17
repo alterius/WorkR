@@ -3,7 +3,7 @@ using NCrontab;
 
 namespace WorkR.Triggers.Timers
 {
-    public sealed class TimerTrigger : ITrigger<TimerSignal>
+    public sealed class TimerTrigger : ITrigger<EmptyTriggerContext>
     {
         private readonly CrontabSchedule _schedule;
         private readonly TimeProvider _timeProvider;
@@ -22,7 +22,7 @@ namespace WorkR.Triggers.Timers
             _runOnStartup = runOnStartup;
         }
 
-        public async Task Execute(WorkerDelegate<TimerSignal> next, CancellationToken stoppingToken)
+        public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Timer trigger initialised with schedule: {schedule}", _schedule.ToString());
 
@@ -30,12 +30,9 @@ namespace WorkR.Triggers.Timers
             {
                 _logger.LogDebug("Timer trigger executing...");
 
-                var signal = new TimerSignal
-                {
-                    TriggerTimestamp = timestamp
-                };
+                var context = new EmptyTriggerContext(timestamp);
 
-                await next(signal, stoppingToken).ConfigureAwait(false);
+                await next(context, stoppingToken).ConfigureAwait(false);
 
                 _logger.LogDebug("Timer trigger executed");
             }

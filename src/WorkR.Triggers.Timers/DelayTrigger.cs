@@ -2,7 +2,7 @@
 
 namespace WorkR.Triggers.Timers
 {
-    public sealed class DelayTrigger : ITrigger<TimerSignal>
+    public sealed class DelayTrigger : ITrigger<EmptyTriggerContext>
     {
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _delay;
@@ -19,18 +19,15 @@ namespace WorkR.Triggers.Timers
             _logger = logger;
         }
 
-        public async Task Execute(WorkerDelegate<TimerSignal> next, CancellationToken stoppingToken)
+        public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Delay trigger initialised with delay: {delay}", _delay);
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var signal = new TimerSignal
-                {
-                    TriggerTimestamp = _timeProvider.GetUtcNow()
-                };
+                var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
                 
-                await next(signal, stoppingToken).ConfigureAwait(false);
+                await next(context, stoppingToken).ConfigureAwait(false);
 
                 await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
             }

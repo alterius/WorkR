@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NCrontab;
 using WorkR.Triggers.Timers;
 
-namespace WorkR.TestApp
+namespace WorkR.Samples.Scheduled
 {
     internal class Program
     {
@@ -23,13 +24,6 @@ namespace WorkR.TestApp
                 {
                     IncludingSeconds = true
                 });
-
-            builder.Services.AddWorker<RandomNumberTrigger, int>(
-                _ => new RandomNumberTrigger(),
-                trigger => trigger.AddWorker<NumberTimesTenWorker, int>(middleware: middleware => middleware.UseErrorHandling<Exception>())
-                    .AddWorker<NumberTimesTenWorker, int>()
-                    .AddWorker<ConvertToStringWorker, string>()
-                    .AddWorker<PrintStringWorker>());
 
             var host = builder.Build();
             host.Run();

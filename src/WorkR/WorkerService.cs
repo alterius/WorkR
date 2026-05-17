@@ -3,20 +3,21 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR
 {
-    public sealed class WorkerService<TTrigger, TTriggerOut> : BackgroundService
-        where TTrigger : ITrigger<TTriggerOut>
+    public sealed class WorkerService<TTrigger, TContext> : BackgroundService
+        where TTrigger : ITrigger<TContext>
+        where TContext : TriggerContext
     {
         private readonly Guid _workerInstanceId = Guid.NewGuid();
         private readonly IServiceProvider _serviceProvider;
         private readonly TTrigger _trigger;
-        private readonly WorkerPipeline<TTriggerOut> _workerPipeline;
+        private readonly WorkerPipeline<TContext> _workerPipeline;
         private readonly ILogger _logger;
 
         public WorkerService(
             IServiceProvider serviceProvider,
             TTrigger trigger,
-            WorkerPipeline<TTriggerOut> workerPipeline,
-            ILogger<WorkerService<TTrigger, TTriggerOut>> logger)
+            WorkerPipeline<TContext> workerPipeline,
+            ILogger<WorkerService<TTrigger, TContext>> logger)
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
             ArgumentNullException.ThrowIfNull(trigger);
@@ -35,6 +36,7 @@ namespace WorkR
                 new
                 {
                     WorkerInstanceId = _workerInstanceId,
+                    Trigger = typeof(TTrigger).Name
                 }))
             {
                 _logger.LogInformation("Worker starting...");

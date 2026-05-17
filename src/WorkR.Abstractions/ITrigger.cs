@@ -1,7 +1,8 @@
 ﻿namespace WorkR
 {
-    public interface ITrigger<out TOut>
+    public interface ITrigger<out TContext>
+        where TContext : TriggerContext
     {
-        Task Execute(WorkerDelegate<TOut> next, CancellationToken stoppingToken);
+        Task Execute(WorkerDelegate<TContext> next, CancellationToken stoppingToken);
     }
 }
