@@ -6,13 +6,13 @@ namespace WorkR
     internal delegate Task WorkerPipelineDelegate<TOut>(IServiceProvider sp, TOut value, CancellationToken ct);
     internal delegate Task WorkerPipelineDelegate<TIn, TOut>(IServiceProvider sp, TIn value, WorkerPipelineDelegate<TOut> next, CancellationToken ct);
 
-    public static class WorkerPipeline
+    internal static class WorkerPipeline
     {
-        public static WorkerPipeline<TIn, TIn> Create<TIn>() =>
+        internal static WorkerPipeline<TIn, TIn> Create<TIn>() =>
             new((sp, value, next, ct) => next(sp, value, ct));
     }
 
-    public class WorkerPipeline<TIn, TOut>
+    internal class WorkerPipeline<TIn, TOut>
     {
         private readonly WorkerPipelineDelegate<TIn, TOut> _pipeline;
 

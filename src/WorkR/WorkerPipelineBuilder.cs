@@ -13,7 +13,7 @@ namespace WorkR
         private readonly WorkerPipelineBuilder<TTrigger, TTriggerOut, TTriggerOut> _builder;
         private readonly Action<MiddlewarePipelineBuilder>? _defaultMiddleware;
 
-        public WorkerPipelineBuilder(
+        internal WorkerPipelineBuilder(
             IServiceCollection services,
             WorkerPipeline<TTriggerOut, TTriggerOut> builder,
             Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
@@ -76,7 +76,7 @@ namespace WorkR
         private readonly IServiceCollection _services;
         private readonly WorkerPipeline<TTriggerOut, TOut> _pipeline;
 
-        public WorkerPipelineBuilder(
+        internal WorkerPipelineBuilder(
             IServiceCollection services,
             WorkerPipeline<TTriggerOut, TOut> pipeline)
         {
