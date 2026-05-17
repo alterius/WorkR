@@ -21,6 +21,13 @@ namespace WorkR.Triggers.RunOnce
             _logger.LogInformation("Run once trigger executing...");
 
             var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
+
+            using var _ = _logger.BeginScope(
+                new
+                {
+                    ExecutionId = context.ExecutionId
+                });
+
             await next(context, stoppingToken).ConfigureAwait(false);
             
             _logger.LogInformation("Run once trigger completed");

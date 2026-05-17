@@ -28,9 +28,15 @@ namespace WorkR.Triggers.Timers
 
             async Task Next(DateTimeOffset timestamp)
             {
-                _logger.LogDebug("Timer trigger executing...");
-
                 var context = new EmptyTriggerContext(timestamp);
+
+                using var _ = _logger.BeginScope(
+                    new
+                    {
+                        ExecutionId = context.ExecutionId
+                    });
+
+                _logger.LogDebug("Timer trigger executing...");
 
                 await next(context, stoppingToken).ConfigureAwait(false);
 

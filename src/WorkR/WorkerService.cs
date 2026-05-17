@@ -32,31 +32,30 @@ namespace WorkR
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            using (_logger.BeginScope(
+            using var _ = _logger.BeginScope(
                 new
                 {
                     WorkerInstanceId = _workerInstanceId,
                     Trigger = typeof(TTrigger).Name
-                }))
+                });
+
+            _logger.LogInformation("Worker starting...");
+
+            var pipeline = _workerPipeline.Build(_serviceProvider);
+
+            _logger.LogInformation("Worker started");
+
+            try
             {
-                _logger.LogInformation("Worker starting...");
-
-                var pipeline = _workerPipeline.Build(_serviceProvider);
-
-                _logger.LogInformation("Worker started");
-
-                try
-                {
-                    await _trigger.Execute(pipeline, stoppingToken).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                    when (stoppingToken.IsCancellationRequested)
-                {
-                    _logger.LogInformation("Worker shutting down...");
-                }
-
-                _logger.LogInformation("Worker stopped");
+                await _trigger.Execute(pipeline, stoppingToken).ConfigureAwait(false);
             }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Worker shutting down...");
+            }
+
+            _logger.LogInformation("Worker stopped");
         }
     }
 }
