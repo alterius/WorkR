@@ -27,5 +27,13 @@ namespace WorkR
 
             return services;
         }
+
+        public static IServiceCollection AddWorker<TTrigger, TTriggerOut>(
+            this IServiceCollection services,
+            TTrigger trigger,
+            WorkerPipelineBuilderDelegate<TTrigger, TTriggerOut> builder,
+            Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
+                where TTrigger : ITrigger<TTriggerOut> =>
+                    AddWorker(services, _ => trigger, builder, defaultMiddleware);
     }
 }
