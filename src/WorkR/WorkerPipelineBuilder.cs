@@ -131,7 +131,7 @@ namespace WorkR
             where TWorker : notnull
         {
             var descriptor = ServiceDescriptor.Describe(typeof(TWorker), sp => factory(sp), lifetime);
-            _services.Add(descriptor);
+            _services.TryAdd(descriptor);
         }
 
         private void TryRegister<TWorker>(ServiceLifetime? lifetime)

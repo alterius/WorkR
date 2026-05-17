@@ -3,8 +3,8 @@ using WorkR.Middleware;
 
 namespace WorkR
 {
-    public delegate Task WorkerPipelineDelegate<TOut>(IServiceProvider sp, TOut value, CancellationToken ct);
-    public delegate Task WorkerPipelineDelegate<TIn, TOut>(IServiceProvider sp, TIn value, WorkerPipelineDelegate<TOut> next, CancellationToken ct);
+    internal delegate Task WorkerPipelineDelegate<TOut>(IServiceProvider sp, TOut value, CancellationToken ct);
+    internal delegate Task WorkerPipelineDelegate<TIn, TOut>(IServiceProvider sp, TIn value, WorkerPipelineDelegate<TOut> next, CancellationToken ct);
 
     public static class WorkerPipeline
     {
@@ -16,13 +16,13 @@ namespace WorkR
     {
         private readonly WorkerPipelineDelegate<TIn, TOut> _pipeline;
 
-        public WorkerPipeline(WorkerPipelineDelegate<TIn, TOut> pipeline)
+        internal WorkerPipeline(WorkerPipelineDelegate<TIn, TOut> pipeline)
         {
             ArgumentNullException.ThrowIfNull(pipeline);
             _pipeline = pipeline;
         }
 
-        public WorkerPipeline<TIn, TNext> Then<TWorker, TNext>(
+        internal WorkerPipeline<TIn, TNext> Then<TWorker, TNext>(
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut, TNext>
         {
@@ -38,7 +38,7 @@ namespace WorkR
                     })(sp2, ct2), ct));
         }
 
-        public WorkerPipeline<TIn> Finally<TWorker>(
+        internal WorkerPipeline<TIn> Finally<TWorker>(
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut>
         {
@@ -67,13 +67,13 @@ namespace WorkR
     {
         private readonly WorkerPipelineDelegate<TIn> _pipeline;
 
-        public WorkerPipeline(WorkerPipelineDelegate<TIn> pipeline)
+        internal WorkerPipeline(WorkerPipelineDelegate<TIn> pipeline)
         {
             ArgumentNullException.ThrowIfNull(pipeline);
             _pipeline = pipeline;
         }
 
-        public WorkerDelegate<TIn> Build(IServiceProvider serviceProvider)
+        internal WorkerDelegate<TIn> Build(IServiceProvider serviceProvider)
         {
             return (value, ct) => _pipeline(serviceProvider, value, ct);
         }

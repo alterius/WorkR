@@ -4,7 +4,7 @@ using WorkR.Middleware;
 
 namespace WorkR
 {
-    public static class Extensions
+    public static class ServiceCollectionExtensions
     {
         public static IServiceCollection AddWorker<TTrigger, TTriggerOut>(
             this IServiceCollection services,

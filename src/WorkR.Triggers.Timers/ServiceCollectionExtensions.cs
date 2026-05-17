@@ -5,7 +5,7 @@ using WorkR.Middleware;
 
 namespace WorkR.Triggers.Timers
 {
-    public static class Extensions
+    public static class ServiceCollectionExtensions
     {
         public static IServiceCollection AddDelayWorker(
             this IServiceCollection services,
