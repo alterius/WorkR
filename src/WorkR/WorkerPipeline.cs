@@ -6,7 +6,7 @@ namespace WorkR
     public delegate Task WorkerPipelineDelegate<TOut>(IServiceProvider sp, TOut value, CancellationToken ct);
     public delegate Task WorkerPipelineDelegate<TIn, TOut>(IServiceProvider sp, TIn value, WorkerPipelineDelegate<TOut> next, CancellationToken ct);
 
-    public class WorkerPipeline
+    public static class WorkerPipeline
     {
         public static WorkerPipeline<TIn, TIn> Create<TIn>() =>
             new((sp, value, next, ct) => next(sp, value, ct));

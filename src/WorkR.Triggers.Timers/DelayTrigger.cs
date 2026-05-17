@@ -2,7 +2,7 @@
 
 namespace WorkR.Triggers.Timers
 {
-    public class DelayTrigger : ITrigger<TimerSignal>
+    public sealed class DelayTrigger : ITrigger<TimerSignal>
     {
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _delay;
@@ -32,7 +32,7 @@ namespace WorkR.Triggers.Timers
                 
                 await next(signal, stoppingToken).ConfigureAwait(false);
 
-                await Task.Delay(_delay, _timeProvider, stoppingToken);
+                await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
             }
         }
     }

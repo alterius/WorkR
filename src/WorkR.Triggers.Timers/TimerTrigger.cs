@@ -3,7 +3,7 @@ using NCrontab;
 
 namespace WorkR.Triggers.Timers
 {
-    public class TimerTrigger : ITrigger<TimerSignal>
+    public sealed class TimerTrigger : ITrigger<TimerSignal>
     {
         private readonly CrontabSchedule _schedule;
         private readonly TimeProvider _timeProvider;
@@ -35,7 +35,7 @@ namespace WorkR.Triggers.Timers
                     TriggerTimestamp = timestamp
                 };
 
-                await next(signal, stoppingToken);
+                await next(signal, stoppingToken).ConfigureAwait(false);
 
                 _logger.LogDebug("Timer trigger executed");
             }
@@ -51,7 +51,7 @@ namespace WorkR.Triggers.Timers
                 var nextOccurrenceUtc = _schedule.GetNextOccurrence(nowUtc);
                 var delay = nextOccurrenceUtc - nowUtc;
 
-                _logger.LogInformation("Timer trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
+                _logger.LogDebug("Timer trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
 
                 await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                 await Next(nextOccurrenceUtc).ConfigureAwait(false);

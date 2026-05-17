@@ -14,6 +14,7 @@ namespace WorkR
                 where TTrigger : ITrigger<TTriggerOut>
         {
             ArgumentNullException.ThrowIfNull(triggerFactory);
+            ArgumentNullException.ThrowIfNull(builder);
 
             var pipeline = builder(
                 new WorkerPipelineBuilder<TTrigger, TTriggerOut>(

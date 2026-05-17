@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR.Middleware
 {
-    public class MiddlewarePipelineBuilder
+    public sealed class MiddlewarePipelineBuilder
     {
         private readonly List<Func<PipelineMiddlewareDelegate, PipelineMiddlewareDelegate>> _middleware = [];
 

@@ -47,7 +47,7 @@ namespace WorkR.Triggers.Timers
                 schedule,
                 parseOptions ?? new CrontabSchedule.ParseOptions
                 {
-                    IncludingSeconds = true
+                    IncludingSeconds = false
                 });
 
             return services.AddWorker(
@@ -63,6 +63,7 @@ namespace WorkR.Triggers.Timers
             this IServiceCollection services,
             string schedule,
             bool runOnStartup = false,
+            CrontabSchedule.ParseOptions? parseOptions = null,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TimerSignal>
@@ -70,7 +71,8 @@ namespace WorkR.Triggers.Timers
             return services.AddScheduledWorker(
                 schedule,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
-                runOnStartup);
+                runOnStartup,
+                parseOptions);
         }
     }
 }
