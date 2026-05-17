@@ -4,25 +4,25 @@ using WorkR.Middleware;
 
 namespace WorkR
 {
-    public static partial class Extensions
+    public static class Extensions
     {
-        public static IServiceCollection AddWorker<TTrigger, TOut>(
+        public static IServiceCollection AddWorker<TTrigger, TTriggerOut>(
             this IServiceCollection services,
             Func<IServiceProvider, TTrigger> triggerFactory,
-            Func<WorkerRegistrationBuilder<TTrigger, TOut>, TerminalWorkerRegistrationBuilder<TTrigger, TOut>> builder,
+            WorkerPipelineBuilderDelegate<TTrigger, TTriggerOut> builder,
             Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
-                where TTrigger : ITrigger<TOut>
+                where TTrigger : ITrigger<TTriggerOut>
         {
             ArgumentNullException.ThrowIfNull(triggerFactory);
 
-            var worker = builder(
-                new WorkerRegistrationBuilder<TTrigger, TOut>(
+            var pipeline = builder(
+                new WorkerPipelineBuilder<TTrigger, TTriggerOut>(
                     services,
-                    WorkerBuilder.FromTrigger<TTrigger, TOut>(triggerFactory),
+                    WorkerPipeline.Create<TTriggerOut>(),
                     defaultMiddleware));
 
             services.AddSingleton<IHostedService>(sp =>
-                ActivatorUtilities.CreateInstance<WorkerService>(sp, worker.Build()));
+                ActivatorUtilities.CreateInstance<WorkerService<TTrigger, TTriggerOut>>(sp, triggerFactory(sp), pipeline));
 
             return services;
         }

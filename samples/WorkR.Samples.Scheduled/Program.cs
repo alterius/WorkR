@@ -20,10 +20,10 @@ namespace WorkR.TestApp
 
             builder.Services.AddWorker<RandomNumberTrigger, int>(
                 _ => new RandomNumberTrigger(),
-                trigger => trigger.RegisterWorker<NumberTimesTenWorker, int>(middleware: middleware => middleware.UseErrorHandling<Exception>())
-                    .RegisterWorker<NumberTimesTenWorker, int>()
-                    .RegisterWorker<ConvertToStringWorker, string>()
-                    .RegisterWorker<PrintStringWorker>());
+                trigger => trigger.AddWorker<NumberTimesTenWorker, int>(middleware: middleware => middleware.UseErrorHandling<Exception>())
+                    .AddWorker<NumberTimesTenWorker, int>()
+                    .AddWorker<ConvertToStringWorker, string>()
+                    .AddWorker<PrintStringWorker>());
 
             var host = builder.Build();
             host.Run();

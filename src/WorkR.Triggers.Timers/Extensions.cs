@@ -10,13 +10,13 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddDelayWorker(
             this IServiceCollection services,
             TimeSpan delay,
-            WorkerRegistrationBuilderDelegate<DelayTrigger, TimerSignal> builder)
+            WorkerPipelineBuilderDelegate<DelayTrigger, TimerSignal> builder)
         {
             services.TryAddSingleton(TimeProvider.System);
 
-            return services.AddWorker<DelayTrigger, TimerSignal>(
+            return services.AddWorker(
                 sp => ActivatorUtilities.CreateInstance<DelayTrigger>(sp, delay),
-                b => builder(b),
+                builder,
                 static mw => mw
                     .UseScope()
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
@@ -31,13 +31,13 @@ namespace WorkR.Triggers.Timers
         {
             return services.AddDelayWorker(
                 delay,
-                builder => builder.RegisterWorker<TWorker>(workerLifetime, middleware));
+                builder => builder.AddWorker<TWorker>(workerLifetime, middleware));
         }
 
         public static IServiceCollection AddScheduledWorker(
             this IServiceCollection services,
             string schedule,
-            WorkerRegistrationBuilderDelegate<TimerTrigger, TimerSignal> builder,
+            WorkerPipelineBuilderDelegate<TimerTrigger, TimerSignal> builder,
             bool runOnStartup = false,
             CrontabSchedule.ParseOptions? parseOptions = null)
         {
@@ -50,9 +50,9 @@ namespace WorkR.Triggers.Timers
                     IncludingSeconds = true
                 });
 
-            return services.AddWorker<TimerTrigger, TimerSignal>(
+            return services.AddWorker(
                 sp => ActivatorUtilities.CreateInstance<TimerTrigger>(sp, cronTabSchedule, runOnStartup),
-                b => builder(b),
+                builder,
                 static mw => mw
                     .UseFireAndForget()
                     .UseScope()
@@ -69,7 +69,7 @@ namespace WorkR.Triggers.Timers
         {
             return services.AddScheduledWorker(
                 schedule,
-                builder => builder.RegisterWorker<TWorker>(workerLifetime, middleware),
+                builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
                 runOnStartup);
         }
     }

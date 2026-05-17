@@ -4,52 +4,52 @@ using WorkR.Middleware;
 
 namespace WorkR
 {
-    public delegate TerminalWorkerRegistrationBuilder<TTrigger, TOut> WorkerRegistrationBuilderDelegate<TTrigger, TOut>(WorkerRegistrationBuilder<TTrigger, TOut> builder)
-        where TTrigger : ITrigger<TOut>;
+    public delegate WorkerPipeline<TTriggerOut> WorkerPipelineBuilderDelegate<TTrigger, TTriggerOut>(WorkerPipelineBuilder<TTrigger, TTriggerOut> builder)
+        where TTrigger : ITrigger<TTriggerOut>;
 
-    public class WorkerRegistrationBuilder<TTrigger, TTriggerOut>
+    public class WorkerPipelineBuilder<TTrigger, TTriggerOut>
         where TTrigger : ITrigger<TTriggerOut>
     {
-        private readonly WorkerRegistrationBuilder<TTrigger, TTriggerOut, TTriggerOut> _builder;
+        private readonly WorkerPipelineBuilder<TTrigger, TTriggerOut, TTriggerOut> _builder;
         private readonly Action<MiddlewarePipelineBuilder>? _defaultMiddleware;
 
-        public WorkerRegistrationBuilder(
+        public WorkerPipelineBuilder(
             IServiceCollection services,
-            WorkerBuilder<TTrigger, TTriggerOut, TTriggerOut> builder,
+            WorkerPipeline<TTriggerOut, TTriggerOut> builder,
             Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
         {
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(builder);
 
-            _builder = new WorkerRegistrationBuilder<TTrigger, TTriggerOut, TTriggerOut>(services, builder);
+            _builder = new WorkerPipelineBuilder<TTrigger, TTriggerOut, TTriggerOut>(services, builder);
             _defaultMiddleware = defaultMiddleware;
         }
 
-        public WorkerRegistrationBuilder<TTrigger, TTriggerOut, TOut> RegisterWorker<TWorker, TOut>(
+        public WorkerPipelineBuilder<TTrigger, TTriggerOut, TOut> AddWorker<TWorker, TOut>(
             ServiceLifetime? lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TTriggerOut, TOut> =>
-                    _builder.RegisterWorker<TWorker, TOut>(lifetime, ResolveMiddleware(middleware));
+                    _builder.AddWorker<TWorker, TOut>(lifetime, ResolveMiddleware(middleware));
 
-        public WorkerRegistrationBuilder<TTrigger, TTriggerOut, TOut> RegisterWorker<TWorker, TOut>(
+        public WorkerPipelineBuilder<TTrigger, TTriggerOut, TOut> AddWorker<TWorker, TOut>(
             Func<IServiceProvider, TWorker> factory,
             ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TTriggerOut, TOut> =>
-                    _builder.RegisterWorker<TWorker, TOut>(factory, lifetime, ResolveMiddleware(middleware));
+                    _builder.AddWorker<TWorker, TOut>(factory, lifetime, ResolveMiddleware(middleware));
 
-        public TerminalWorkerRegistrationBuilder<TTrigger, TTriggerOut> RegisterWorker<TWorker>(
+        public WorkerPipeline<TTriggerOut> AddWorker<TWorker>(
             ServiceLifetime? lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TTriggerOut> =>
-                    _builder.RegisterWorker<TWorker>(lifetime, ResolveMiddleware(middleware));
+                    _builder.AddWorker<TWorker>(lifetime, ResolveMiddleware(middleware));
 
-        public TerminalWorkerRegistrationBuilder<TTrigger, TTriggerOut> RegisterWorker<TWorker>(
+        public WorkerPipeline<TTriggerOut> AddWorker<TWorker>(
             Func<IServiceProvider, TWorker> factory,
             ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TTriggerOut> =>
-                    _builder.RegisterWorker(factory, lifetime, ResolveMiddleware(middleware));
+                    _builder.AddWorker(factory, lifetime, ResolveMiddleware(middleware));
 
         private Action<MiddlewarePipelineBuilder>? ResolveMiddleware(Action<MiddlewarePipelineBuilder>? middleware)
         {
@@ -70,63 +70,61 @@ namespace WorkR
         }
     }
 
-    public class WorkerRegistrationBuilder<TTrigger, TTriggerOut, TPipeOut>
+    public class WorkerPipelineBuilder<TTrigger, TTriggerOut, TOut>
         where TTrigger : ITrigger<TTriggerOut>
     {
         private readonly IServiceCollection _services;
-        private readonly WorkerBuilder<TTrigger, TTriggerOut, TPipeOut> _builder;
+        private readonly WorkerPipeline<TTriggerOut, TOut> _pipeline;
 
-        public WorkerRegistrationBuilder(
+        public WorkerPipelineBuilder(
             IServiceCollection services,
-            WorkerBuilder<TTrigger, TTriggerOut, TPipeOut> builder)
+            WorkerPipeline<TTriggerOut, TOut> pipeline)
         {
             ArgumentNullException.ThrowIfNull(services);
-            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(pipeline);
 
             _services = services;
-            _builder = builder;
+            _pipeline = pipeline;
         }
 
-        public WorkerRegistrationBuilder<TTrigger, TTriggerOut, TOut> RegisterWorker<TWorker, TOut>(
+        public WorkerPipelineBuilder<TTrigger, TTriggerOut, TNext> AddWorker<TWorker, TNext>(
             ServiceLifetime? lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TPipeOut, TOut>
+                where TWorker : IWorker<TOut, TNext>
         {
             TryRegister<TWorker>(lifetime);
-            var builder = _builder.WithWorker<TWorker, TOut>(middleware);
-            return new WorkerRegistrationBuilder<TTrigger, TTriggerOut, TOut>(_services, builder);
+            var builder = _pipeline.Then<TWorker, TNext>(middleware);
+            return new WorkerPipelineBuilder<TTrigger, TTriggerOut, TNext>(_services, builder);
         }
 
-        public WorkerRegistrationBuilder<TTrigger, TTriggerOut, TOut> RegisterWorker<TWorker, TOut>(
+        public WorkerPipelineBuilder<TTrigger, TTriggerOut, TNext> AddWorker<TWorker, TNext>(
             Func<IServiceProvider, TWorker> factory,
             ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TPipeOut, TOut>
+                where TWorker : IWorker<TOut, TNext>
         {
             RegisterFactory(factory, lifetime);
-            var builder = _builder.WithWorker<TWorker, TOut>(middleware);
-            return new WorkerRegistrationBuilder<TTrigger, TTriggerOut, TOut>(_services, builder);
+            var builder = _pipeline.Then<TWorker, TNext>(middleware);
+            return new WorkerPipelineBuilder<TTrigger, TTriggerOut, TNext>(_services, builder);
         }
 
-        public TerminalWorkerRegistrationBuilder<TTrigger, TTriggerOut> RegisterWorker<TWorker>(
+        public WorkerPipeline<TTriggerOut> AddWorker<TWorker>(
             ServiceLifetime? lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TPipeOut>
+                where TWorker : IWorker<TOut>
         {
             TryRegister<TWorker>(lifetime);
-            var builder = _builder.WithWorker<TWorker>(middleware);
-            return new TerminalWorkerRegistrationBuilder<TTrigger, TTriggerOut>(builder);
+            return _pipeline.Finally<TWorker>(middleware);
         }
 
-        public TerminalWorkerRegistrationBuilder<TTrigger, TTriggerOut> RegisterWorker<TWorker>(
+        public WorkerPipeline<TTriggerOut> AddWorker<TWorker>(
             Func<IServiceProvider, TWorker> factory,
             ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TPipeOut>
+                where TWorker : IWorker<TOut>
         {
             RegisterFactory(factory, lifetime);
-            var builder = _builder.WithWorker<TWorker>(middleware);
-            return new TerminalWorkerRegistrationBuilder<TTrigger, TTriggerOut>(builder);
+            return _pipeline.Finally<TWorker>(middleware);
         }
 
         private void RegisterFactory<TWorker>(Func<IServiceProvider, TWorker> factory, ServiceLifetime lifetime)
@@ -144,20 +142,5 @@ namespace WorkR
                 _services.TryAdd(descriptor);
             }
         }
-    }
-
-    public class TerminalWorkerRegistrationBuilder<TTrigger, TTriggerOut>
-        where TTrigger : ITrigger<TTriggerOut>
-    {
-        private readonly TerminalWorkerBuilder<TTrigger, TTriggerOut> _builder;
-
-        public TerminalWorkerRegistrationBuilder(TerminalWorkerBuilder<TTrigger, TTriggerOut> builder)
-        {
-            ArgumentNullException.ThrowIfNull(builder);
-
-            _builder = builder;
-        }
-
-        public IWorkerBuilder Build() => _builder;
     }
 }
