@@ -1,8 +1,11 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
     <File Path="LICENSE.txt" />
     <File Path="README.md" />
+    <File Path="version.json" />
   </Folder>
   <Project Path="samples/WorkR.Samples.CustomTrigger/WorkR.Samples.CustomTrigger.csproj" Id="97bc5973-5e0b-4d1a-a1ea-179f211ba4d7" />
   <Project Path="samples/WorkR.Samples.Scheduled/WorkR.Samples.Scheduled.csproj" />
