@@ -7,6 +7,6 @@
 
     public interface IWorker<in TIn, out TOut>
     {
-        public Task Execute(TIn source, Func<TOut, CancellationToken, Task> next, CancellationToken ct);
+        public Task Execute(TIn source, WorkerDelegate<TOut> next, CancellationToken ct);
     }
 }

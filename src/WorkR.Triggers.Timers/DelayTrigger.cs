@@ -19,7 +19,7 @@ namespace WorkR.Triggers.Timers
             _logger = logger;
         }
 
-        public async Task Execute(Func<TimerSignal, CancellationToken, Task> next, CancellationToken stoppingToken)
+        public async Task Execute(WorkerDelegate<TimerSignal> next, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Delay trigger initialised with delay: {delay}", _delay);
 

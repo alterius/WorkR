@@ -73,7 +73,7 @@ namespace WorkR
             _pipeline = pipeline;
         }
 
-        public Func<TIn, CancellationToken, Task> Build(IServiceProvider serviceProvider)
+        public WorkerDelegate<TIn> Build(IServiceProvider serviceProvider)
         {
             return (value, ct) => _pipeline(serviceProvider, value, ct);
         }

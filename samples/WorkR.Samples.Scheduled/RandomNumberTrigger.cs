@@ -4,7 +4,7 @@ namespace WorkR.TestApp
 {
     public class RandomNumberTrigger : ITrigger<int>
     {
-        public async Task Execute(Func<int, CancellationToken, Task> next, CancellationToken ct)
+        public async Task Execute(WorkerDelegate<int> next, CancellationToken ct)
         {
             while (!ct.IsCancellationRequested)
             {

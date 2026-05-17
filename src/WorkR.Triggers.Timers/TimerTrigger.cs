@@ -22,7 +22,7 @@ namespace WorkR.Triggers.Timers
             _runOnStartup = runOnStartup;
         }
 
-        public async Task Execute(Func<TimerSignal, CancellationToken, Task> next, CancellationToken stoppingToken)
+        public async Task Execute(WorkerDelegate<TimerSignal> next, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Timer trigger initialised with schedule: {schedule}", _schedule.ToString());
 

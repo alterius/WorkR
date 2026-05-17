@@ -2,6 +2,6 @@
 {
     public interface ITrigger<out TOut>
     {
-        Task Execute(Func<TOut, CancellationToken, Task> next, CancellationToken stoppingToken);
+        Task Execute(WorkerDelegate<TOut> next, CancellationToken stoppingToken);
     }
 }
