@@ -1,6 +1,6 @@
 ﻿namespace WorkR.Middleware
 {
-    public class TimeoutMiddleware : IMiddleware
+    public class TimeoutMiddleware : IWorkerMiddleware
     {
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _timeout;

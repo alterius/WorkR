@@ -1,6 +1,6 @@
 ﻿namespace WorkR
 {
-    public interface IMiddleware
+    public interface IWorkerMiddleware
     {
         Task Execute(Func<CancellationToken, Task> next, CancellationToken ct);
     }

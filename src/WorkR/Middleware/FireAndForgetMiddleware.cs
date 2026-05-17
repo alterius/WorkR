@@ -2,7 +2,7 @@
 
 namespace WorkR.Middleware
 {
-    public class FireAndForgetMiddleware : IMiddleware
+    public class FireAndForgetMiddleware : IWorkerMiddleware
     {
         private readonly ILogger _logger;
 

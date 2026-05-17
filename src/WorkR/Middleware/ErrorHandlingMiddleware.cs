@@ -2,7 +2,7 @@
 
 namespace WorkR.Middleware
 {
-    public class ErrorHandlingMiddleware<TException> : IMiddleware
+    public class ErrorHandlingMiddleware<TException> : IWorkerMiddleware
         where TException : Exception
     {
         private readonly ILogger<ErrorHandlingMiddleware<TException>> _logger;

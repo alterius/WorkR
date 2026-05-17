@@ -54,7 +54,7 @@ namespace WorkR
                     })(sp2, ct2), ct));
         }
 
-        private static Func<ServiceProviderMiddlewareDelegate, ServiceProviderMiddlewareDelegate> BuildMiddleware(
+        private static Func<PipelineMiddlewareDelegate, PipelineMiddlewareDelegate> BuildMiddleware(
             Action<MiddlewarePipelineBuilder>? configure)
         {
             var builder = new MiddlewarePipelineBuilder();
