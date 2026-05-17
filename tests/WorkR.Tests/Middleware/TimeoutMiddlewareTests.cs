@@ -33,7 +33,7 @@ namespace WorkR.Tests.Middleware
             var middleware = new TimeoutMiddleware(TimeProvider.System, TimeSpan.FromSeconds(30));
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.CompletedTask, CancellationToken.None));
+                middleware.Execute(_ => Task.CompletedTask, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -47,7 +47,7 @@ namespace WorkR.Tests.Middleware
             {
                 nextStarted.Release();
                 await Task.Delay(Timeout.Infinite, ct);
-            }, CancellationToken.None);
+            }, TestContext.Current.CancellationToken);
 
             await nextStarted.WaitAsync(TestContext.Current.CancellationToken);
             timeProvider.Advance(TimeSpan.FromSeconds(5));

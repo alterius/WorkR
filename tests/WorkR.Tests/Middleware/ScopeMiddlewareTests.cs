@@ -17,7 +17,7 @@ namespace WorkR.Tests.Middleware
             {
                 capturedSp = sp;
                 return Task.CompletedTask;
-            }, CancellationToken.None);
+            }, TestContext.Current.CancellationToken);
 
             capturedSp.ShouldNotBeNull();
             capturedSp.ShouldNotBeSameAs(rootSp);
@@ -36,7 +36,7 @@ namespace WorkR.Tests.Middleware
             {
                 resolved = sp.GetRequiredService<DisposableService>();
                 return Task.CompletedTask;
-            }, CancellationToken.None);
+            }, TestContext.Current.CancellationToken);
 
             resolved.ShouldNotBeNull();
             resolved.Disposed.ShouldBeTrue();
@@ -56,7 +56,7 @@ namespace WorkR.Tests.Middleware
                 {
                     resolved = sp.GetRequiredService<DisposableService>();
                     return Task.FromException(new InvalidOperationException());
-                }, CancellationToken.None));
+                }, TestContext.Current.CancellationToken));
 
             resolved.ShouldNotBeNull();
             resolved.Disposed.ShouldBeTrue();

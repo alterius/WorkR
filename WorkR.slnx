@@ -13,4 +13,5 @@
   <Project Path="src/WorkR.Triggers.Timers/WorkR.Triggers.Timers.csproj" />
   <Project Path="src/WorkR/WorkR.csproj" />
   <Project Path="tests/WorkR.Tests/WorkR.Tests.csproj" />
+  <Project Path="tests/WorkR.Triggers.Timers.Tests/WorkR.Triggers.Timers.Tests.csproj" />
 </Solution>
