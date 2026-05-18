@@ -13,6 +13,8 @@ namespace WorkR.Triggers.AzureStorageQueues
             WorkerPipelineBuilderDelegate<StorageQueueTrigger, StorageQueueTriggerContext> builder,
             Action<StorageQueueTriggerConfig>? configure = null)
         {
+            ArgumentNullException.ThrowIfNull(queueClientFactory);
+
             services.TryAddSingleton(TimeProvider.System);
 
             var config = new StorageQueueTriggerConfig();
@@ -48,6 +50,8 @@ namespace WorkR.Triggers.AzureStorageQueues
             Action<StorageQueueTriggerConfig>? configure = null,
             Func<IServiceProvider, IStorageQueueMessageDeserializer<T>>? deserializerFactory = null)
         {
+            ArgumentNullException.ThrowIfNull(queueClientFactory);
+
             services.TryAddSingleton(TimeProvider.System);
 
             var config = new StorageQueueTriggerConfig();
