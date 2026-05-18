@@ -79,6 +79,31 @@ namespace WorkR.Tests.Middleware
             workerCalled.ShouldBeFalse();
         }
 
+        [Fact]
+        public void UseTimeout_ReturnsBuilderForChaining()
+        {
+            var builder = new MiddlewarePipelineBuilder();
+
+            builder.UseTimeout(TimeSpan.FromSeconds(1)).ShouldBeSameAs(builder);
+        }
+
+        [Fact]
+        public void UsePipelineMiddleware_WithFactory_WhenFactoryIsNull_ThrowsArgumentNullException()
+        {
+            var builder = new MiddlewarePipelineBuilder();
+
+            Should.Throw<ArgumentNullException>(() =>
+                builder.UsePipelineMiddleware((Func<IServiceProvider, ScopeMiddleware>)null!));
+        }
+
+        [Fact]
+        public void UsePipelineMiddleware_WithFactory_ReturnsBuilderForChaining()
+        {
+            var builder = new MiddlewarePipelineBuilder();
+
+            builder.UsePipelineMiddleware(_ => new ScopeMiddleware()).ShouldBeSameAs(builder);
+        }
+
         private sealed class NoopMiddleware : IWorkerMiddleware
         {
             public Task Execute(Func<CancellationToken, Task> next, CancellationToken ct) => next(ct);

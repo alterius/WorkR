@@ -9,6 +9,12 @@ namespace WorkR.Tests.Middleware
     public class ErrorHandlingMiddlewareTests
     {
         [Fact]
+        public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
+        {
+            Should.Throw<ArgumentNullException>(() => new ErrorHandlingMiddleware<Exception>(null!));
+        }
+
+        [Fact]
         public async Task Execute_WhenNoExceptionThrown_CallsNext()
         {
             var called = false;

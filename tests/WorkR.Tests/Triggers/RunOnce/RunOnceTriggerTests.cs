@@ -62,23 +62,26 @@ namespace WorkR.Tests.Triggers.RunOnce
             var logger = new FakeLogger<RunOnceTrigger>();
             var trigger = new RunOnceTrigger(TimeProvider.System, logger);
 
-            // When next throws, only the pre-next log is recorded
             await Should.ThrowAsync<InvalidOperationException>(() =>
                 trigger.Execute((_, _) => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
 
-            logger.Collector.GetSnapshot().ShouldHaveSingleItem()
-                .Level.ShouldBe(LogLevel.Information);
+            var snapshot = logger.Collector.GetSnapshot();
+            snapshot.Count.ShouldBe(2);
+            snapshot[0].Level.ShouldBe(LogLevel.Information);
+            snapshot[0].Message.ShouldContain("executing");
         }
 
         [Fact]
-        public async Task Execute_LogsAfterNextCompletes()
+        public async Task Execute_LogsExitedAfterNextCompletes()
         {
             var logger = new FakeLogger<RunOnceTrigger>();
             var trigger = new RunOnceTrigger(TimeProvider.System, logger);
 
             await trigger.Execute((_, _) => Task.CompletedTask, TestContext.Current.CancellationToken);
 
-            logger.Collector.GetSnapshot().Count.ShouldBe(2);
+            var snapshot = logger.Collector.GetSnapshot();
+            snapshot.Count.ShouldBe(2);
+            snapshot[1].Message.ShouldContain("exited");
         }
 
         private static RunOnceTrigger Create() =>

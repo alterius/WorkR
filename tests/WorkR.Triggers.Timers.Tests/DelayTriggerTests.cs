@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using Shouldly;
-using WorkR.Triggers.Timers;
 
 namespace WorkR.Triggers.Timers.Tests
 {
@@ -135,6 +134,40 @@ namespace WorkR.Triggers.Timers.Tests
 
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+        }
+
+        [Fact]
+        public async Task Execute_WhenTokenAlreadyCancelled_DoesNotCallNext()
+        {
+            var timeProvider = new FakeTimeProvider();
+            var called = false;
+            using var cts = new CancellationTokenSource();
+            await cts.CancelAsync();
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+
+            await trigger.Execute((_, _) =>
+            {
+                called = true;
+                return Task.CompletedTask;
+            }, cts.Token);
+
+            called.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task Execute_LogsExitedOnCancellation()
+        {
+            var timeProvider = new FakeTimeProvider();
+            var logger = new FakeLogger<DelayTrigger>();
+            using var cts = new CancellationTokenSource();
+            var trigger = new DelayTrigger(timeProvider, TimeSpan.FromSeconds(60), logger);
+
+            var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            logger.Collector.GetSnapshot().ShouldContain(log => log.Message.Contains("exited"));
         }
 
         private static DelayTrigger Create(FakeTimeProvider timeProvider, TimeSpan delay) =>

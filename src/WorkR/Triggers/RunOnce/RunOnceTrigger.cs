@@ -25,12 +25,17 @@ namespace WorkR.Triggers.RunOnce
             using var _ = _logger.BeginScope(
                 new
                 {
-                    ExecutionId = context.ExecutionId
+                    context.ExecutionId
                 });
 
-            await next(context, stoppingToken).ConfigureAwait(false);
-            
-            _logger.LogInformation("Run once trigger completed");
+            try
+            {
+                await next(context, stoppingToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _logger.LogInformation("Run once trigger exited");
+            }
         }
     }
 }

@@ -23,26 +23,31 @@ namespace WorkR.Triggers.Timers
         {
             _logger.LogInformation("Delay trigger initialised with delay: {delay}", _delay);
 
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
 
-                using var _ = _logger.BeginScope(
-                    new
-                    {
-                        ExecutionId = context.ExecutionId
-                    });
+                    using var _ = _logger.BeginScope(
+                        new
+                        {
+                            context.ExecutionId
+                        });
 
-                _logger.LogDebug("Delay trigger executing...");
+                    _logger.LogDebug("Delay trigger executing...");
 
-                await next(context, stoppingToken).ConfigureAwait(false);
+                    await next(context, stoppingToken).ConfigureAwait(false);
 
-                _logger.LogDebug("Delay trigger executed");
+                    _logger.LogDebug("Delay trigger executed");
 
-                await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
+                    await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
+                }
             }
-
-            _logger.LogInformation("Delay trigger completed");
+            finally
+            {
+                _logger.LogInformation("Delay trigger exited");
+            }
         }
     }
 }

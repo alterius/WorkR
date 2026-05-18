@@ -144,6 +144,24 @@ namespace WorkR.Tests
             middlewareCalled.ShouldBeTrue();
         }
 
+        [Fact]
+        public async Task Finally_AppliesMiddlewareAroundWorker()
+        {
+            var middlewareCalled = false;
+            await using var sp = new ServiceCollection()
+                .AddSingleton<CapturingWorker>()
+                .BuildServiceProvider();
+
+            var del = WorkerPipeline.Create<string>()
+                .Finally<CapturingWorker>(mw =>
+                    mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
+                .Build(sp);
+
+            await del("hello", TestContext.Current.CancellationToken);
+
+            middlewareCalled.ShouldBeTrue();
+        }
+
         private sealed class UpperCaseWorker : IWorker<string, string>
         {
             public Task Execute(string source, WorkerDelegate<string> next, CancellationToken ct) =>

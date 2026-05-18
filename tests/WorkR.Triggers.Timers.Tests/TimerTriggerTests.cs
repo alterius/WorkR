@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using NCrontab;
 using Shouldly;
-using WorkR.Triggers.Timers;
 
 namespace WorkR.Triggers.Timers.Tests
 {
@@ -176,6 +175,40 @@ namespace WorkR.Triggers.Timers.Tests
 
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+        }
+
+        [Fact]
+        public async Task Execute_WhenTokenAlreadyCancelled_DoesNotCallNext()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var called = false;
+            using var cts = new CancellationTokenSource();
+            await cts.CancelAsync();
+            var trigger = Create(timeProvider, EveryMinuteSchedule);
+
+            await trigger.Execute((_, _) =>
+            {
+                called = true;
+                return Task.CompletedTask;
+            }, cts.Token);
+
+            called.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task Execute_LogsExitedOnCancellation()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var logger = new FakeLogger<TimerTrigger>();
+            using var cts = new CancellationTokenSource();
+            var trigger = new TimerTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger);
+
+            var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            logger.Collector.GetSnapshot().ShouldContain(log => log.Message.Contains("exited"));
         }
 
         private static TimerTrigger Create(FakeTimeProvider timeProvider, string schedule, bool runOnStartup = false) =>

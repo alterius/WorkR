@@ -10,6 +10,12 @@ namespace WorkR.Tests.Middleware
     public class FireAndForgetMiddlewareTests
     {
         [Fact]
+        public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
+        {
+            Should.Throw<ArgumentNullException>(() => new FireAndForgetMiddleware(null!));
+        }
+
+        [Fact]
         public void Execute_ReturnsImmediatelyWithoutAwaitingNext()
         {
             var middleware = new FireAndForgetMiddleware(NullLogger<FireAndForgetMiddleware>.Instance);
