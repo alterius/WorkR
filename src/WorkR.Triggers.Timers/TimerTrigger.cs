@@ -3,7 +3,7 @@ using NCrontab;
 
 namespace WorkR.Triggers.Timers
 {
-    public class TimerTrigger : ITrigger<TimerSignal>
+    public sealed class TimerTrigger : ITrigger<EmptyTriggerContext>
     {
         private readonly CrontabSchedule _schedule;
         private readonly TimeProvider _timeProvider;
@@ -22,33 +22,49 @@ namespace WorkR.Triggers.Timers
             _runOnStartup = runOnStartup;
         }
 
-        public async Task Execute(Func<TimerSignal, CancellationToken, Task> next, CancellationToken stoppingToken)
+        public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Timer trigger initialised with schedule: {schedule}", _schedule.ToString());
+            _logger.LogInformation("Timer trigger initialised with schedule {schedule} and runOnStartup {runOnStartup}", _schedule.ToString(), _runOnStartup);
 
             async Task Next(DateTimeOffset timestamp)
             {
-                var signal = new TimerSignal
+                var context = new EmptyTriggerContext(timestamp);
+
+                using var _ = _logger.BeginScope(
+                    new
+                    {
+                        context.ExecutionId
+                    });
+
+                _logger.LogDebug("Timer trigger executing...");
+
+                await next(context, stoppingToken).ConfigureAwait(false);
+
+                _logger.LogDebug("Timer trigger executed");
+            }
+
+            try
+            {
+                if (_runOnStartup)
                 {
-                    TriggerTimestamp = timestamp
-                };
+                    await Next(_timeProvider.GetUtcNow()).ConfigureAwait(false);
+                }
 
-                await next(signal, stoppingToken);
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+                    var nextOccurrenceUtc = _schedule.GetNextOccurrence(nowUtc);
+                    var delay = nextOccurrenceUtc - nowUtc;
+
+                    _logger.LogDebug("Timer trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
+
+                    await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
+                    await Next(nextOccurrenceUtc).ConfigureAwait(false);
+                }
             }
-
-            if (_runOnStartup)
+            finally
             {
-                await Next(_timeProvider.GetUtcNow()).ConfigureAwait(false);
-            }
-
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-                var nextOccurrenceUtc = _schedule.GetNextOccurrence(nowUtc);
-                var delay = nextOccurrenceUtc - nowUtc;
-
-                await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
-                await Next(nextOccurrenceUtc).ConfigureAwait(false);
+                _logger.LogInformation("Timer trigger exited");
             }
         }
     }

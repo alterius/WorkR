@@ -5,18 +5,18 @@ using WorkR.Middleware;
 
 namespace WorkR.Triggers.Timers
 {
-    public static class Extensions
+    public static class ServiceCollectionExtensions
     {
         public static IServiceCollection AddDelayWorker(
             this IServiceCollection services,
             TimeSpan delay,
-            WorkerRegistrationBuilderDelegate<DelayTrigger, TimerSignal> builder)
+            WorkerPipelineBuilderDelegate<DelayTrigger, EmptyTriggerContext> builder)
         {
             services.TryAddSingleton(TimeProvider.System);
 
-            return services.AddWorker<DelayTrigger, TimerSignal>(
+            return services.AddWorker(
                 sp => ActivatorUtilities.CreateInstance<DelayTrigger>(sp, delay),
-                b => builder(b),
+                builder,
                 static mw => mw
                     .UseScope()
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
@@ -27,17 +27,17 @@ namespace WorkR.Triggers.Timers
             TimeSpan delay,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TimerSignal>
+                where TWorker : IWorker<EmptyTriggerContext>
         {
             return services.AddDelayWorker(
                 delay,
-                builder => builder.RegisterWorker<TWorker>(workerLifetime, middleware));
+                builder => builder.AddWorker<TWorker>(workerLifetime, middleware));
         }
 
         public static IServiceCollection AddScheduledWorker(
             this IServiceCollection services,
             string schedule,
-            WorkerRegistrationBuilderDelegate<TimerTrigger, TimerSignal> builder,
+            WorkerPipelineBuilderDelegate<TimerTrigger, EmptyTriggerContext> builder,
             bool runOnStartup = false,
             CrontabSchedule.ParseOptions? parseOptions = null)
         {
@@ -47,12 +47,12 @@ namespace WorkR.Triggers.Timers
                 schedule,
                 parseOptions ?? new CrontabSchedule.ParseOptions
                 {
-                    IncludingSeconds = true
+                    IncludingSeconds = false
                 });
 
-            return services.AddWorker<TimerTrigger, TimerSignal>(
+            return services.AddWorker(
                 sp => ActivatorUtilities.CreateInstance<TimerTrigger>(sp, cronTabSchedule, runOnStartup),
-                b => builder(b),
+                builder,
                 static mw => mw
                     .UseFireAndForget()
                     .UseScope()
@@ -63,14 +63,16 @@ namespace WorkR.Triggers.Timers
             this IServiceCollection services,
             string schedule,
             bool runOnStartup = false,
+            CrontabSchedule.ParseOptions? parseOptions = null,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TimerSignal>
+                where TWorker : IWorker<EmptyTriggerContext>
         {
             return services.AddScheduledWorker(
                 schedule,
-                builder => builder.RegisterWorker<TWorker>(workerLifetime, middleware),
-                runOnStartup);
+                builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
+                runOnStartup,
+                parseOptions);
         }
     }
 }

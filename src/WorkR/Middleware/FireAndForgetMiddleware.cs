@@ -2,7 +2,7 @@
 
 namespace WorkR.Middleware
 {
-    public class FireAndForgetMiddleware : IMiddleware
+    public sealed class FireAndForgetMiddleware : IWorkerMiddleware
     {
         private readonly ILogger _logger;
 
@@ -32,7 +32,7 @@ namespace WorkR.Middleware
                         _logger.LogError(ex, "Worker execution failed with unhandled exception");
                     }
                 },
-                ct).ConfigureAwait(false);
+                ct);
             return Task.CompletedTask;
         }
     }

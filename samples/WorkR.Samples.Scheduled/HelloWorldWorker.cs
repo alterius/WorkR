@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using WorkR.Triggers.Timers;
 
-namespace WorkR.TestApp
+namespace WorkR.Samples.Scheduled
 {
-    public class HelloWorldWorker : IWorker<TimerSignal>
+    public class HelloWorldWorker : IWorker<EmptyTriggerContext>
     {
         private readonly ILogger _logger;
 
@@ -12,7 +11,7 @@ namespace WorkR.TestApp
             _logger = logger;
         }
 
-        public Task Execute(TimerSignal _, CancellationToken ct)
+        public Task Execute(EmptyTriggerContext _, CancellationToken ct)
         {
             _logger.LogInformation("Hello world!");
             return Task.CompletedTask;

@@ -1,8 +1,10 @@
-﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NCrontab;
 using WorkR.Triggers.Timers;
 
-namespace WorkR.TestApp
+namespace WorkR.Samples.Scheduled
 {
     internal class Program
     {
@@ -16,14 +18,12 @@ namespace WorkR.TestApp
                 options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
             });
 
-            builder.Services.AddScheduledWorker<HelloWorldWorker>("*/5 * * * * *");
-
-            builder.Services.AddWorker<RandomNumberTrigger, int>(
-                _ => new RandomNumberTrigger(),
-                trigger => trigger.RegisterWorker<NumberTimesTenWorker, int>(middleware: middleware => middleware.UseErrorHandling<Exception>())
-                    .RegisterWorker<NumberTimesTenWorker, int>()
-                    .RegisterWorker<ConvertToStringWorker, string>()
-                    .RegisterWorker<PrintStringWorker>());
+            builder.Services.AddScheduledWorker<HelloWorldWorker>(
+                "*/5 * * * * *",
+                parseOptions: new CrontabSchedule.ParseOptions
+                {
+                    IncludingSeconds = true
+                });
 
             var host = builder.Build();
             host.Run();

@@ -3,12 +3,12 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR.Middleware
 {
-    public class MiddlewarePipelineBuilder
+    public sealed class MiddlewarePipelineBuilder
     {
-        private readonly List<Func<ServiceProviderMiddlewareDelegate, ServiceProviderMiddlewareDelegate>> _middleware = [];
+        private readonly List<Func<PipelineMiddlewareDelegate, PipelineMiddlewareDelegate>> _middleware = [];
 
         public MiddlewarePipelineBuilder UseMiddleware<TMiddleware>(Func<IServiceProvider, TMiddleware> factory)
-            where TMiddleware : IMiddleware
+            where TMiddleware : IWorkerMiddleware
         {
             ArgumentNullException.ThrowIfNull(factory);
 
@@ -21,7 +21,7 @@ namespace WorkR.Middleware
             return this;
         }
 
-        public MiddlewarePipelineBuilder UseMiddleware(IMiddleware middleware)
+        public MiddlewarePipelineBuilder UseMiddleware(IWorkerMiddleware middleware)
         {
             ArgumentNullException.ThrowIfNull(middleware);
 
@@ -43,10 +43,10 @@ namespace WorkR.Middleware
             UseMiddleware(sp => new TimeoutMiddleware(sp.GetRequiredService<TimeProvider>(), timeout));
 
         public MiddlewarePipelineBuilder UseScope() =>
-            UseServiceProviderMiddleware(new ScopeMiddleware());
+            UsePipelineMiddleware(new ScopeMiddleware());
 
-        internal MiddlewarePipelineBuilder UseServiceProviderMiddleware<TMiddleware>(Func<IServiceProvider, TMiddleware> factory)
-            where TMiddleware : IServiceProviderMiddleware
+        internal MiddlewarePipelineBuilder UsePipelineMiddleware<TMiddleware>(Func<IServiceProvider, TMiddleware> factory)
+            where TMiddleware : IPipelineMiddleware
         {
             ArgumentNullException.ThrowIfNull(factory);
 
@@ -59,7 +59,7 @@ namespace WorkR.Middleware
             return this;
         }
 
-        internal MiddlewarePipelineBuilder UseServiceProviderMiddleware(IServiceProviderMiddleware middleware)
+        internal MiddlewarePipelineBuilder UsePipelineMiddleware(IPipelineMiddleware middleware)
         {
             ArgumentNullException.ThrowIfNull(middleware);
 
@@ -68,7 +68,7 @@ namespace WorkR.Middleware
             return this;
         }
 
-        internal ServiceProviderMiddlewareDelegate Build(ServiceProviderMiddlewareDelegate workerExecution)
+        internal PipelineMiddlewareDelegate Build(PipelineMiddlewareDelegate workerExecution)
         {
             ArgumentNullException.ThrowIfNull(workerExecution);
 

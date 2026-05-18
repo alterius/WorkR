@@ -5,15 +5,22 @@ using WorkR.Middleware;
 
 namespace WorkR.Tests.Middleware
 {
+    [Trait("Category", "L0")]
     public class ErrorHandlingMiddlewareTests
     {
+        [Fact]
+        public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
+        {
+            Should.Throw<ArgumentNullException>(() => new ErrorHandlingMiddleware<Exception>(null!));
+        }
+
         [Fact]
         public async Task Execute_WhenNoExceptionThrown_CallsNext()
         {
             var called = false;
             var middleware = Create<Exception>();
 
-            await middleware.Execute(ct => { called = true; return Task.CompletedTask; }, CancellationToken.None);
+            await middleware.Execute(ct => { called = true; return Task.CompletedTask; }, TestContext.Current.CancellationToken);
 
             called.ShouldBeTrue();
         }
@@ -24,7 +31,7 @@ namespace WorkR.Tests.Middleware
             var middleware = Create<InvalidOperationException>();
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), CancellationToken.None));
+                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -33,7 +40,7 @@ namespace WorkR.Tests.Middleware
             var middleware = Create<ArgumentException>();
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), CancellationToken.None));
+                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -42,7 +49,7 @@ namespace WorkR.Tests.Middleware
             var middleware = Create<Exception>();
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), CancellationToken.None));
+                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -51,7 +58,7 @@ namespace WorkR.Tests.Middleware
             var middleware = Create<InvalidOperationException>(predicate: _ => false);
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), CancellationToken.None));
+                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -60,7 +67,7 @@ namespace WorkR.Tests.Middleware
             var middleware = Create<InvalidOperationException>(predicate: _ => true);
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), CancellationToken.None));
+                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -70,7 +77,7 @@ namespace WorkR.Tests.Middleware
             var exception = new InvalidOperationException("test error");
             var middleware = new ErrorHandlingMiddleware<InvalidOperationException>(logger);
 
-            await middleware.Execute(_ => Task.FromException(exception), CancellationToken.None);
+            await middleware.Execute(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
 
             var log = logger.Collector.GetSnapshot().ShouldHaveSingleItem();
             log.Level.ShouldBe(LogLevel.Error);

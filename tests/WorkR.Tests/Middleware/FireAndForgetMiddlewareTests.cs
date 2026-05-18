@@ -6,8 +6,15 @@ using WorkR.Middleware;
 
 namespace WorkR.Tests.Middleware
 {
+    [Trait("Category", "L0")]
     public class FireAndForgetMiddlewareTests
     {
+        [Fact]
+        public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
+        {
+            Should.Throw<ArgumentNullException>(() => new FireAndForgetMiddleware(null!));
+        }
+
         [Fact]
         public void Execute_ReturnsImmediatelyWithoutAwaitingNext()
         {
