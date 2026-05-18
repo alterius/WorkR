@@ -7,6 +7,7 @@ using WorkR.Triggers.Timers;
 
 namespace WorkR.Triggers.Timers.Tests
 {
+    [Trait("Category", "L0")]
     public class TimerTriggerTests
     {
         private static readonly DateTimeOffset StartTime = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);

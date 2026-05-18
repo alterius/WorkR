@@ -5,6 +5,7 @@ using WorkR.Middleware;
 
 namespace WorkR.Tests.Middleware
 {
+    [Trait("Category", "L0")]
     public class ErrorHandlingMiddlewareTests
     {
         [Fact]

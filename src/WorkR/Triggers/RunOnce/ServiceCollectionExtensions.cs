@@ -15,7 +15,8 @@ namespace WorkR.Triggers.RunOnce
             return services.AddWorker(
                 sp => ActivatorUtilities.CreateInstance<RunOnceTrigger>(sp),
                 builder,
-                static mw => mw.UseScope()
+                static mw => mw
+                    .UseScope()
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
         }
 

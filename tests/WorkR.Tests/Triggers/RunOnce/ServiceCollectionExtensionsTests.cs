@@ -5,6 +5,7 @@ using WorkR.Triggers.RunOnce;
 
 namespace WorkR.Tests.Triggers.RunOnce
 {
+    [Trait("Category", "L0")]
     public class ServiceCollectionExtensionsTests
     {
         [Fact]

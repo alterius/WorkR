@@ -6,6 +6,7 @@ using WorkR.Triggers.Timers;
 
 namespace WorkR.Triggers.Timers.Tests
 {
+    [Trait("Category", "L0")]
     public class DelayTriggerTests
     {
         [Fact]

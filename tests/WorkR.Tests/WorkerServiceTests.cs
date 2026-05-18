@@ -4,6 +4,7 @@ using Shouldly;
 
 namespace WorkR.Tests
 {
+    [Trait("Category", "L0")]
     public class WorkerServiceTests
     {
         [Fact]
@@ -120,13 +121,22 @@ namespace WorkR.Tests
         }
 
         [Fact]
-        public async Task ExecuteAsync_WhenTriggerThrowsOperationCanceledException_WithoutCancelledToken_Propagates()
+        public async Task ExecuteAsync_WhenTriggerThrowsOperationCanceledException_WithoutCancelledToken_FaultsExecuteTask()
         {
             var service = Create(new FakeTrigger((next, ct) =>
                 Task.FromException(new OperationCanceledException())));
 
+            // .NET 10 no longer propagates a synchronously-faulted ExecuteAsync through StartAsync
+            try
+            {
+                await service.StartAsync(CancellationToken.None);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
             await Should.ThrowAsync<OperationCanceledException>(() =>
-                service.StartAsync(CancellationToken.None));
+                service.ExecuteTask!.WaitAsync(TestContext.Current.CancellationToken));
         }
 
         private static WorkerService<FakeTrigger, EmptyTriggerContext> Create(

@@ -3,6 +3,7 @@ using Shouldly;
 
 namespace WorkR.Tests
 {
+    [Trait("Category", "L0")]
     public class WorkerPipelineTests
     {
         // WorkerPipeline<TIn> — public class, internal constructor
