@@ -15,9 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WorkR.Triggers.AzureStorageQueues\WorkR.Triggers.AzureStorageQueues.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\WorkR.Triggers.Timers\WorkR.Triggers.Timers.csproj" />
   </ItemGroup>
 

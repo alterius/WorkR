@@ -56,10 +56,10 @@ namespace WorkR.Triggers.AzureStorageQueues
             return services.AddWorker(
                 sp =>
                 {
-                    var deserialzier = deserializerFactory?.Invoke(sp)
+                    var deserializer = deserializerFactory?.Invoke(sp)
                         ?? new JsonStorageQueueMessageDeserializer<T>();
 
-                    return ActivatorUtilities.CreateInstance<StorageQueueTrigger<T>>(sp, queueClientFactory(sp), config, deserialzier);
+                    return ActivatorUtilities.CreateInstance<StorageQueueTrigger<T>>(sp, queueClientFactory(sp), config, deserializer);
                 },
                 builder,
                 static mw => mw

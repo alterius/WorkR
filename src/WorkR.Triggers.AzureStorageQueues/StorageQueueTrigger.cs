@@ -21,12 +21,6 @@ namespace WorkR.Triggers.AzureStorageQueues
             TimeProvider timeProvider,
             ILogger logger)
         {
-            ArgumentNullException.ThrowIfNull(queueClient);
-            ArgumentNullException.ThrowIfNull(config);
-            ArgumentNullException.ThrowIfNull(contextFactory);
-            ArgumentNullException.ThrowIfNull(timeProvider);
-            ArgumentNullException.ThrowIfNull(logger);
-
             _queueClient = queueClient;
             _config = config;
             _contextFactory = contextFactory;
@@ -45,17 +39,17 @@ namespace WorkR.Triggers.AzureStorageQueues
                     response = await _queueClient.ReceiveMessagesAsync(
                         maxMessages: _config.MaxMessages,
                         visibilityTimeout: _config.VisibilityTimeout,
-                        cancellationToken: stoppingToken);
+                        cancellationToken: stoppingToken).ConfigureAwait(false);
                 }
                 catch (RequestFailedException ex)
                     when (ex.Status is 429 or 500 or 503)
                 {
-                    await Task.Delay(_config.PollingInterval, _timeProvider, stoppingToken);
+                    await Task.Delay(_config.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
                     continue;
                 }
                 catch (HttpRequestException)
                 {
-                    await Task.Delay(_config.PollingInterval, _timeProvider, stoppingToken);
+                    await Task.Delay(_config.PollingInterval * 2, _timeProvider, stoppingToken).ConfigureAwait(false);
                     continue;
                 }
 
@@ -63,7 +57,7 @@ namespace WorkR.Triggers.AzureStorageQueues
 
                 if (messages.Length == 0)
                 {
-                    await Task.Delay(_config.PollingInterval, _timeProvider, stoppingToken);
+                    await Task.Delay(_config.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
                     continue;
                 }
 
@@ -73,7 +67,7 @@ namespace WorkR.Triggers.AzureStorageQueues
 
                     try
                     {
-                        context = await _contextFactory(message);
+                        context = await _contextFactory(message).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -82,7 +76,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                         continue;
                     }
                     
-                    await next(context, stoppingToken);
+                    await next(context, stoppingToken).ConfigureAwait(false);
                 }
             }
         }
@@ -118,7 +112,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                 new StorageQueueTriggerContext(
                     _timeProvider.GetUtcNow(),
                     queueMessage,
-                    ct => _queueClient.DeleteMessageAsync(queueMessage.MessageId, queueMessage.PopReceipt, ct)));
+                    async ct => await _queueClient.DeleteMessageAsync(queueMessage.MessageId, queueMessage.PopReceipt, ct).ConfigureAwait(false)));
     }
 
     public sealed class StorageQueueTrigger<T> : ITrigger<StorageQueueTriggerContext<T>>
@@ -153,8 +147,8 @@ namespace WorkR.Triggers.AzureStorageQueues
         private async Task<StorageQueueTriggerContext<T>> CreateContext(QueueMessage queueMessage) =>
             new(
                 _timeProvider.GetUtcNow(),
-                await _deserializer.Deserialize(queueMessage),
+                await _deserializer.Deserialize(queueMessage).ConfigureAwait(false),
                 queueMessage,
-                ct => _queueClient.DeleteMessageAsync(queueMessage.MessageId, queueMessage.PopReceipt, ct));
+                async ct => await _queueClient.DeleteMessageAsync(queueMessage.MessageId, queueMessage.PopReceipt, ct).ConfigureAwait(false));
     }
 }
