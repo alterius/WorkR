@@ -1,10 +1,8 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
-using Azure.Storage.Queues.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NSubstitute;
 using Shouldly;
 
 namespace WorkR.Triggers.AzureStorageQueues.Tests;
@@ -107,12 +105,9 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
             {
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(received);
-                var deserializer = Substitute.For<IStorageQueueMessageDeserializer<string>>();
-                deserializer.Deserialize(Arg.Any<QueueMessage>())
-                    .Returns(ci => Task.FromResult(ci.Arg<QueueMessage>().Body.ToString().ToUpper()));
                 services.AddStorageQueueTrigger<string, StringCapturingWorker>(
                     _ => queueClient,
-                    deserializerFactory: _ => deserializer);
+                    deserializerFactory: _ => msg => Task.FromResult(msg.Body.ToString().ToUpper()));
             })
             .Build();
 

@@ -1,6 +1,7 @@
-﻿using Azure.Storage.Queues;
+using Azure.Storage.Queues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using WorkR.Middleware;
 
 namespace WorkR.Triggers.AzureStorageQueues
@@ -14,6 +15,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             Action<StorageQueueTriggerConfig>? configure = null)
         {
             ArgumentNullException.ThrowIfNull(queueClientFactory);
+            ArgumentNullException.ThrowIfNull(builder);
 
             services.TryAddSingleton(TimeProvider.System);
 
@@ -21,7 +23,11 @@ namespace WorkR.Triggers.AzureStorageQueues
             configure?.Invoke(config);
 
             return services.AddWorker(
-                sp => ActivatorUtilities.CreateInstance<StorageQueueTrigger>(sp, queueClientFactory(sp), config),
+                sp => new StorageQueueTrigger(
+                    queueClientFactory(sp),
+                    config,
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<StorageQueueTrigger>>()),
                 builder,
                 static mw => mw
                     .UseFireAndForget()
@@ -48,9 +54,10 @@ namespace WorkR.Triggers.AzureStorageQueues
             Func<IServiceProvider, QueueClient> queueClientFactory,
             WorkerPipelineBuilderDelegate<StorageQueueTrigger<T>, StorageQueueTriggerContext<T>> builder,
             Action<StorageQueueTriggerConfig>? configure = null,
-            Func<IServiceProvider, IStorageQueueMessageDeserializer<T>>? deserializerFactory = null)
+            Func<IServiceProvider, StorageQueueMessageDeserializer<T>>? deserializerFactory = null)
         {
             ArgumentNullException.ThrowIfNull(queueClientFactory);
+            ArgumentNullException.ThrowIfNull(builder);
 
             services.TryAddSingleton(TimeProvider.System);
 
@@ -58,13 +65,12 @@ namespace WorkR.Triggers.AzureStorageQueues
             configure?.Invoke(config);
 
             return services.AddWorker(
-                sp =>
-                {
-                    var deserializer = deserializerFactory?.Invoke(sp)
-                        ?? new JsonStorageQueueMessageDeserializer<T>();
-
-                    return ActivatorUtilities.CreateInstance<StorageQueueTrigger<T>>(sp, queueClientFactory(sp), config, deserializer);
-                },
+                sp => new StorageQueueTrigger<T>(
+                    queueClientFactory(sp),
+                    config,
+                    deserializerFactory?.Invoke(sp) ?? StorageQueueMessageDeserializers.Json<T>(),
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<StorageQueueTrigger<T>>>()),
                 builder,
                 static mw => mw
                     .UseFireAndForget()
@@ -78,7 +84,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null,
             Action<StorageQueueTriggerConfig>? configure = null,
-            Func<IServiceProvider, IStorageQueueMessageDeserializer<T>>? deserializerFactory = null)
+            Func<IServiceProvider, StorageQueueMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<StorageQueueTriggerContext<T>>
         {
             return services.AddStorageQueueTrigger(

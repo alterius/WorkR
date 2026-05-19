@@ -326,12 +326,12 @@ public class StorageQueueTriggerTypedTests
     [Fact]
     public void Constructor_WhenQueueClientIsNull_Throws() =>
         Should.Throw<ArgumentNullException>(() =>
-            new StorageQueueTrigger<string>(null!, DefaultConfig, Substitute.For<IStorageQueueMessageDeserializer<string>>(), TimeProvider.System, new FakeLogger<StorageQueueTrigger<string>>()));
+            new StorageQueueTrigger<string>(null!, DefaultConfig, StorageQueueMessageDeserializers.Json<string>(), TimeProvider.System, new FakeLogger<StorageQueueTrigger<string>>()));
 
     [Fact]
     public void Constructor_WhenConfigIsNull_Throws() =>
         Should.Throw<ArgumentNullException>(() =>
-            new StorageQueueTrigger<string>(SubClient(), null!, Substitute.For<IStorageQueueMessageDeserializer<string>>(), TimeProvider.System, new FakeLogger<StorageQueueTrigger<string>>()));
+            new StorageQueueTrigger<string>(SubClient(), null!, StorageQueueMessageDeserializers.Json<string>(), TimeProvider.System, new FakeLogger<StorageQueueTrigger<string>>()));
 
     [Fact]
     public void Constructor_WhenDeserializerIsNull_Throws() =>
@@ -341,12 +341,12 @@ public class StorageQueueTriggerTypedTests
     [Fact]
     public void Constructor_WhenTimeProviderIsNull_Throws() =>
         Should.Throw<ArgumentNullException>(() =>
-            new StorageQueueTrigger<string>(SubClient(), DefaultConfig, Substitute.For<IStorageQueueMessageDeserializer<string>>(), null!, new FakeLogger<StorageQueueTrigger<string>>()));
+            new StorageQueueTrigger<string>(SubClient(), DefaultConfig, StorageQueueMessageDeserializers.Json<string>(), null!, new FakeLogger<StorageQueueTrigger<string>>()));
 
     [Fact]
     public void Constructor_WhenLoggerIsNull_Throws() =>
         Should.Throw<ArgumentNullException>(() =>
-            new StorageQueueTrigger<string>(SubClient(), DefaultConfig, Substitute.For<IStorageQueueMessageDeserializer<string>>(), TimeProvider.System, null!));
+            new StorageQueueTrigger<string>(SubClient(), DefaultConfig, StorageQueueMessageDeserializers.Json<string>(), TimeProvider.System, null!));
 
     // ---------------------------------------------------------------------------
     // Typed message delivery
@@ -365,7 +365,7 @@ public class StorageQueueTriggerTypedTests
         TestPayload? captured = null;
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger<TestPayload>(
-            queueClient, DefaultConfig, new JsonStorageQueueMessageDeserializer<TestPayload>(),
+            queueClient, DefaultConfig, StorageQueueMessageDeserializers.Json<TestPayload>(),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<TestPayload>>());
 
         var executeTask = trigger.Execute((ctx, ct) =>
@@ -396,7 +396,7 @@ public class StorageQueueTriggerTypedTests
         string? capturedId = null;
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger<TestPayload>(
-            queueClient, DefaultConfig, new JsonStorageQueueMessageDeserializer<TestPayload>(),
+            queueClient, DefaultConfig, StorageQueueMessageDeserializers.Json<TestPayload>(),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<TestPayload>>());
 
         var executeTask = trigger.Execute((ctx, ct) =>
@@ -427,7 +427,7 @@ public class StorageQueueTriggerTypedTests
         var deliveredIds = new List<string>();
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger<TestPayload>(
-            queueClient, DefaultConfig, new JsonStorageQueueMessageDeserializer<TestPayload>(),
+            queueClient, DefaultConfig, StorageQueueMessageDeserializers.Json<TestPayload>(),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<TestPayload>>());
 
         var executeTask = trigger.Execute((ctx, ct) =>
@@ -453,14 +453,12 @@ public class StorageQueueTriggerTypedTests
         var emptyResponse = EmptyResponse();
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(firstResponse, emptyResponse);
-        var deserializer = Substitute.For<IStorageQueueMessageDeserializer<string>>();
-        deserializer.Deserialize(Arg.Any<QueueMessage>())
-            .Returns(ci => Task.FromResult(ci.Arg<QueueMessage>().Body.ToString().ToUpper()));
         var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         string? captured = null;
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger<string>(
-            queueClient, DefaultConfig, deserializer,
+            queueClient, DefaultConfig,
+            msg => Task.FromResult(msg.Body.ToString().ToUpper()),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<string>>());
 
         var executeTask = trigger.Execute((ctx, ct) =>

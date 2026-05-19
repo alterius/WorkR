@@ -5,49 +5,48 @@ using Shouldly;
 namespace WorkR.Triggers.AzureStorageQueues.Tests;
 
 [Trait("Category", "L0")]
-public class JsonStorageQueueMessageDeserializerTests
+public class StorageQueueMessageDeserializersTests
 {
-    private static QueueMessage MakeMessage(string body) =>
-        QueuesModelFactory.QueueMessage("id", "pop", BinaryData.FromString(body), 0);
-
     [Fact]
-    public async Task Deserialize_ValidJson_ReturnsDeserializedValue()
+    public async Task Json_ValidJson_ReturnsDeserializedValue()
     {
-        var deserializer = new JsonStorageQueueMessageDeserializer<Payload>();
-
-        var result = await deserializer.Deserialize(MakeMessage("""{"Name":"hello"}"""));
+        var deserializer = StorageQueueMessageDeserializers.Json<Payload>();
+        var result = await deserializer(MakeMessage("""{"Name":"hello"}"""));
 
         result.Name.ShouldBe("hello");
     }
 
     [Fact]
-    public async Task Deserialize_WithCustomOptions_HonoursOptions()
+    public async Task Json_WithCustomOptions_HonoursOptions()
     {
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializer = new JsonStorageQueueMessageDeserializer<Payload>(options);
+        var deserializer = StorageQueueMessageDeserializers.Json<Payload>(options);
 
-        var result = await deserializer.Deserialize(MakeMessage("""{"name":"hello"}"""));
+        var result = await deserializer(MakeMessage("""{"name":"hello"}"""));
 
         result.Name.ShouldBe("hello");
     }
 
     [Fact]
-    public async Task Deserialize_InvalidJson_Throws()
+    public async Task Json_InvalidJson_Throws()
     {
-        var deserializer = new JsonStorageQueueMessageDeserializer<Payload>();
+        var deserializer = StorageQueueMessageDeserializers.Json<Payload>();
 
         await Should.ThrowAsync<JsonException>(() =>
-            deserializer.Deserialize(MakeMessage("not-valid-json")));
+            deserializer(MakeMessage("not-valid-json")));
     }
 
     [Fact]
-    public async Task Deserialize_JsonNull_ThrowsInvalidOperationException()
+    public async Task Json_JsonNull_ThrowsJsonException()
     {
-        var deserializer = new JsonStorageQueueMessageDeserializer<Payload>();
+        var deserializer = StorageQueueMessageDeserializers.Json<Payload>();
 
-        await Should.ThrowAsync<InvalidOperationException>(() =>
-            deserializer.Deserialize(MakeMessage("null")));
+        await Should.ThrowAsync<JsonException>(() =>
+            deserializer(MakeMessage("null")));
     }
+
+    private static QueueMessage MakeMessage(string body) =>
+        QueuesModelFactory.QueueMessage("id", "pop", BinaryData.FromString(body), 0);
 
     private record Payload(string Name);
 }
