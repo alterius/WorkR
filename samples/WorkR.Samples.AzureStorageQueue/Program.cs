@@ -3,7 +3,6 @@ using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NCrontab;
 using Testcontainers.Azurite;
 using WorkR.Triggers.AzureStorageQueues;
 using WorkR.Triggers.Timers;
@@ -42,10 +41,7 @@ namespace WorkR.Samples.AzureStorageQueue
 
                 builder.Services.AddScheduledWorker<SendTestMessageWorker>(
                     "*/5 * * * * *",
-                    parseOptions: new CrontabSchedule.ParseOptions
-                    {
-                        IncludingSeconds = true
-                    });
+                    includeSeconds: true);
 
                 builder.Services.AddStorageQueueWorker<TestMessage, LogMessageWorker<TestMessage>>(
                     sp => sp.GetRequiredService<QueueServiceClient>(),
