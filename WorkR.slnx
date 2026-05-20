@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Samples/">
+    <Project Path="samples/WorkR.Samples.AzureServiceBus/WorkR.Samples.AzureServiceBus.csproj" Id="546f5666-f360-49a4-8fe4-158b5cd1c54c" />
     <Project Path="samples/WorkR.Samples.AzureStorageQueue/WorkR.Samples.AzureStorageQueue.csproj" Id="fdc0a730-3457-4955-a08f-66e5ae4e4c79" />
     <Project Path="samples/WorkR.Samples.CustomTrigger/WorkR.Samples.CustomTrigger.csproj" Id="97bc5973-5e0b-4d1a-a1ea-179f211ba4d7" />
     <Project Path="samples/WorkR.Samples.Scheduled/WorkR.Samples.Scheduled.csproj" />
