@@ -1,4 +1,4 @@
-﻿using Azure.Messaging.ServiceBus;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
             WorkerPipelineBuilderDelegate<ServiceBusTrigger, ServiceBusTriggerContext> builder,
-            ServiceBusProcessorOptions? options = null)
+            Action<ServiceBusProcessorOptions>? configure = null)
         {
             ArgumentNullException.ThrowIfNull(clientFactory);
             ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
@@ -27,7 +27,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     queueName,
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger>>(),
-                    options),
+                    CreateOptions(configure)),
                 builder,
                 static mw => mw
                     .UseFireAndForget()
@@ -41,14 +41,14 @@ namespace WorkR.Triggers.AzureServiceBus
             string queueName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null,
-            ServiceBusProcessorOptions? options = null)
+            Action<ServiceBusProcessorOptions>? configure = null)
                 where TWorker : IWorker<ServiceBusTriggerContext>
         {
             return services.AddServiceBusTrigger(
                 clientFactory,
                 queueName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
-                options);
+                configure);
         }
 
         public static IServiceCollection AddServiceBusTrigger(
@@ -57,7 +57,7 @@ namespace WorkR.Triggers.AzureServiceBus
             string topicName,
             string subscriptionName,
             WorkerPipelineBuilderDelegate<ServiceBusTrigger, ServiceBusTriggerContext> builder,
-            ServiceBusProcessorOptions? options = null)
+            Action<ServiceBusProcessorOptions>? configure = null)
         {
             ArgumentNullException.ThrowIfNull(clientFactory);
             ArgumentException.ThrowIfNullOrWhiteSpace(topicName);
@@ -73,7 +73,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     subscriptionName,
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger>>(),
-                    options),
+                    CreateOptions(configure)),
                 builder,
                 static mw => mw
                     .UseFireAndForget()
@@ -88,7 +88,7 @@ namespace WorkR.Triggers.AzureServiceBus
             string subscriptionName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null,
-            ServiceBusProcessorOptions? options = null)
+            Action<ServiceBusProcessorOptions>? configure = null)
                 where TWorker : IWorker<ServiceBusTriggerContext>
         {
             return services.AddServiceBusTrigger(
@@ -96,7 +96,7 @@ namespace WorkR.Triggers.AzureServiceBus
                 topicName,
                 subscriptionName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
-                options);
+                configure);
         }
 
         public static IServiceCollection AddServiceBusTrigger<T>(
@@ -104,7 +104,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
             WorkerPipelineBuilderDelegate<ServiceBusTrigger<T>, ServiceBusTriggerContext<T>> builder,
-            ServiceBusProcessorOptions? options = null,
+            Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
         {
             ArgumentNullException.ThrowIfNull(clientFactory);
@@ -120,7 +120,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     deserializerFactory?.Invoke(sp) ?? ServiceBusMessageDeserializers.Json<T>(),
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger<T>>>(),
-                    options),
+                    CreateOptions(configure)),
                 builder,
                 static mw => mw
                     .UseFireAndForget()
@@ -134,7 +134,7 @@ namespace WorkR.Triggers.AzureServiceBus
             string queueName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null,
-            ServiceBusProcessorOptions? options = null,
+            Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<ServiceBusTriggerContext<T>>
         {
@@ -142,7 +142,7 @@ namespace WorkR.Triggers.AzureServiceBus
                 clientFactory,
                 queueName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
-                options,
+                configure,
                 deserializerFactory);
         }
 
@@ -152,7 +152,7 @@ namespace WorkR.Triggers.AzureServiceBus
             string topicName,
             string subscriptionName,
             WorkerPipelineBuilderDelegate<ServiceBusTrigger<T>, ServiceBusTriggerContext<T>> builder,
-            ServiceBusProcessorOptions? options = null,
+            Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
         {
             ArgumentNullException.ThrowIfNull(clientFactory);
@@ -170,7 +170,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     deserializerFactory?.Invoke(sp) ?? ServiceBusMessageDeserializers.Json<T>(),
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger<T>>>(),
-                    options),
+                    CreateOptions(configure)),
                 builder,
                 static mw => mw
                     .UseFireAndForget()
@@ -185,7 +185,7 @@ namespace WorkR.Triggers.AzureServiceBus
             string subscriptionName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null,
-            ServiceBusProcessorOptions? options = null,
+            Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<ServiceBusTriggerContext<T>>
         {
@@ -194,8 +194,21 @@ namespace WorkR.Triggers.AzureServiceBus
                 topicName,
                 subscriptionName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
-                options,
+                configure,
                 deserializerFactory);
+        }
+
+        private static ServiceBusProcessorOptions? CreateOptions(Action<ServiceBusProcessorOptions>? configure)
+        {
+            if (configure is null)
+            {
+                return null;
+            }
+            
+            var options = new ServiceBusProcessorOptions();
+            configure(options);
+
+            return options;
         }
     }
 }
