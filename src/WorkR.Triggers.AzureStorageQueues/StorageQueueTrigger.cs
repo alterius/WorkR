@@ -34,6 +34,9 @@ namespace WorkR.Triggers.AzureStorageQueues
 
             _logger.LogInformation("Storage queue trigger initialised");
 
+            var consecutiveEmptyPolls = 0;
+            var consecutiveErrors = 0;
+
             try
             {
                 while (!stoppingToken.IsCancellationRequested)
@@ -50,22 +53,41 @@ namespace WorkR.Triggers.AzureStorageQueues
                     catch (RequestFailedException ex)
                         when (ex.Status is 429 or 500 or 503)
                     {
-                        await Task.Delay(_options.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
+                        var delay = _options.ErrorDelay(consecutiveErrors);
+                        if (consecutiveErrors < int.MaxValue)
+                        {
+                            consecutiveErrors++;
+                        }
+                        await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                         continue;
                     }
                     catch (HttpRequestException)
                     {
-                        await Task.Delay(_options.PollingInterval * 2, _timeProvider, stoppingToken).ConfigureAwait(false);
+                        var delay = _options.ErrorDelay(consecutiveErrors);
+                        if (consecutiveErrors < int.MaxValue)
+                        {
+                            consecutiveErrors++;
+                        }
+                        await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                         continue;
                     }
+
+                    consecutiveErrors = 0;
 
                     var messages = response.Value;
 
                     if (messages.Length == 0)
                     {
-                        await Task.Delay(_options.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
+                        var delay = _options.PollingDelay(consecutiveEmptyPolls);
+                        if (consecutiveEmptyPolls < int.MaxValue)
+                        {
+                            consecutiveEmptyPolls++;
+                        }
+                        await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                         continue;
                     }
+
+                    consecutiveEmptyPolls = 0;
 
                     foreach (var message in messages)
                     {

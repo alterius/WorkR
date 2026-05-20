@@ -121,9 +121,9 @@ public class StorageQueueTriggerTests
     }
 
     [Fact]
-    public async Task WhenQueueIsEmpty_WaitsPollingIntervalBeforeRetrying()
+    public async Task WhenQueueIsEmpty_WaitsPollingDelayBeforeRetrying()
     {
-        var options = new StorageQueueTriggerOptions { PollingInterval = TimeSpan.FromSeconds(10) };
+        var options = new StorageQueueTriggerOptions { PollingDelay = StorageQueueDelayStrategy.Fixed(TimeSpan.FromSeconds(10)) };
         var secondPollStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var (serviceClient, queueClient) = SubClients();
         var pollCount = 0;
@@ -155,7 +155,7 @@ public class StorageQueueTriggerTests
     [InlineData(429)]
     [InlineData(500)]
     [InlineData(503)]
-    public async Task WhenRequestFailedWithRetryableStatus_ContinuesPollingAfterInterval(int status)
+    public async Task WhenRequestFailedWithRetryableStatus_ContinuesPollingAfterErrorDelay(int status)
     {
         var recoveredPollStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var (serviceClient, queueClient) = SubClients();
@@ -173,7 +173,7 @@ public class StorageQueueTriggerTests
 
         var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
-        timeProvider.Advance(DefaultOptions.PollingInterval);
+        timeProvider.Advance(DefaultOptions.ErrorDelay(0));
         await recoveredPollStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
         await cts.CancelAsync();
@@ -181,35 +181,174 @@ public class StorageQueueTriggerTests
     }
 
     [Fact]
-    public async Task WhenHttpRequestExceptionThrown_WaitsDoublePollingIntervalBeforeRetrying()
+    public async Task WhenHttpRequestExceptionThrown_ContinuesPollingAfterErrorDelay()
     {
-        var options = new StorageQueueTriggerOptions { PollingInterval = TimeSpan.FromSeconds(5) };
-        var secondPollStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var recoveredPollStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var (serviceClient, queueClient) = SubClients();
-        var pollCount = 0;
+        var threw = false;
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
-                pollCount++;
-                if (pollCount == 1) throw new HttpRequestException("Network error");
-                if (pollCount == 2) secondPollStarted.TrySetResult();
+                if (!threw) { threw = true; throw new HttpRequestException("Network error"); }
+                recoveredPollStarted.TrySetResult();
                 return EmptyResponse();
             });
         var timeProvider = new FakeTimeProvider(StartTime);
+        using var cts = new CancellationTokenSource();
+        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, timeProvider, new FakeLogger<StorageQueueTrigger>());
+
+        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+
+        timeProvider.Advance(DefaultOptions.ErrorDelay(0));
+        await recoveredPollStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+    }
+
+    [Fact]
+    public async Task ErrorDelay_ReceivesIncrementingErrorCount()
+    {
+        var secondDelayStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (serviceClient, queueClient) = SubClients();
+        var capturedCounts = new List<int>();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns<Response<QueueMessage[]>>(_ => throw new RequestFailedException(429, "Transient"));
+        var timeProvider = new FakeTimeProvider(StartTime);
+        var options = new StorageQueueTriggerOptions
+        {
+            ErrorDelay = count =>
+            {
+                capturedCounts.Add(count);
+                if (capturedCounts.Count == 2) secondDelayStarted.TrySetResult();
+                return TimeSpan.FromSeconds(1);
+            }
+        };
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
         var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
-        pollCount.ShouldBe(1);
-        timeProvider.Advance(TimeSpan.FromSeconds(5));
-        secondPollStarted.Task.IsCompleted.ShouldBeFalse(); // single interval not enough — HttpRequestException uses 2x
-
-        timeProvider.Advance(TimeSpan.FromSeconds(5));
-        await secondPollStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        capturedCounts.Take(2).ShouldBe([0, 1]);
+    }
+
+    [Fact]
+    public async Task ErrorDelay_ResetsToZeroAfterSuccessfulReceive()
+    {
+        var secondDelayStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (serviceClient, queueClient) = SubClients();
+        var capturedCounts = new List<int>();
+        var callCount = 0;
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                callCount++;
+                // first call: error, second call: success (empty), third+ call: error again
+                if (callCount == 1 || callCount >= 3) throw new RequestFailedException(429, "Transient");
+                return EmptyResponse();
+            });
+        var timeProvider = new FakeTimeProvider(StartTime);
+        var options = new StorageQueueTriggerOptions
+        {
+            ErrorDelay = count =>
+            {
+                capturedCounts.Add(count);
+                if (capturedCounts.Count == 2) secondDelayStarted.TrySetResult();
+                return TimeSpan.FromSeconds(1);
+            },
+            PollingDelay = _ => TimeSpan.FromSeconds(1)
+        };
+        using var cts = new CancellationTokenSource();
+        var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
+
+        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(1)); // clears first error delay
+        timeProvider.Advance(TimeSpan.FromSeconds(1)); // clears empty poll delay
+        await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        // first error sees count=0, after successful receive count resets, next error sees count=0 again
+        capturedCounts.Take(2).ShouldBe([0, 0]);
+    }
+
+    [Fact]
+    public async Task PollingDelay_ReceivesIncrementingEmptyPollCount()
+    {
+        var secondDelayStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (serviceClient, queueClient) = SubClients();
+        var capturedCounts = new List<int>();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => EmptyResponse());
+        var timeProvider = new FakeTimeProvider(StartTime);
+        var options = new StorageQueueTriggerOptions
+        {
+            PollingDelay = count =>
+            {
+                capturedCounts.Add(count);
+                if (capturedCounts.Count == 2) secondDelayStarted.TrySetResult();
+                return TimeSpan.FromSeconds(1);
+            }
+        };
+        using var cts = new CancellationTokenSource();
+        var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
+
+        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        capturedCounts.Take(2).ShouldBe([0, 1]);
+    }
+
+    [Fact]
+    public async Task PollingDelay_ResetsToZeroAfterMessagesReceived()
+    {
+        var secondDelayStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (serviceClient, queueClient) = SubClients();
+        var capturedCounts = new List<int>();
+        var pollCount = 0;
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                pollCount++;
+                // first poll: empty, second poll: has message, third+ poll: empty
+                return pollCount == 2 ? MessagesResponse(MakeMessage()) : EmptyResponse();
+            });
+        var timeProvider = new FakeTimeProvider(StartTime);
+        var options = new StorageQueueTriggerOptions
+        {
+            PollingDelay = count =>
+            {
+                capturedCounts.Add(count);
+                if (capturedCounts.Count == 2) secondDelayStarted.TrySetResult();
+                return TimeSpan.FromSeconds(1);
+            }
+        };
+        using var cts = new CancellationTokenSource();
+        var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
+
+        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(1)); // advances past first empty delay
+        await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        // first empty poll sees count=0, after message received count resets, third empty poll sees count=0 again
+        capturedCounts.Take(2).ShouldBe([0, 0]);
     }
 
     [Fact]
