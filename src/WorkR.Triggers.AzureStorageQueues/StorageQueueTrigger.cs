@@ -9,20 +9,20 @@ namespace WorkR.Triggers.AzureStorageQueues
         where TContext : TriggerContext
     {
         private readonly QueueClient _queueClient;
-        private readonly StorageQueueTriggerConfig _config;
+        private readonly StorageQueueTriggerOptions _options;
         private readonly Func<Guid, QueueMessage, Task<TContext>> _contextFactory;
         private readonly TimeProvider _timeProvider;
         private readonly ILogger _logger;
 
         public StorageQueueTriggerBase(
             QueueClient queueClient,
-            StorageQueueTriggerConfig config,
+            StorageQueueTriggerOptions options,
             Func<Guid, QueueMessage, Task<TContext>> contextFactory,
             TimeProvider timeProvider,
             ILogger logger)
         {
             _queueClient = queueClient;
-            _config = config;
+            _options = options;
             _contextFactory = contextFactory;
             _timeProvider = timeProvider;
             _logger = logger;
@@ -43,19 +43,19 @@ namespace WorkR.Triggers.AzureStorageQueues
                     try
                     {
                         response = await _queueClient.ReceiveMessagesAsync(
-                            maxMessages: _config.MaxMessages,
-                            visibilityTimeout: _config.VisibilityTimeout,
+                            maxMessages: _options.MaxMessages,
+                            visibilityTimeout: _options.VisibilityTimeout,
                             cancellationToken: stoppingToken).ConfigureAwait(false);
                     }
                     catch (RequestFailedException ex)
                         when (ex.Status is 429 or 500 or 503)
                     {
-                        await Task.Delay(_config.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
+                        await Task.Delay(_options.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
                         continue;
                     }
                     catch (HttpRequestException)
                     {
-                        await Task.Delay(_config.PollingInterval * 2, _timeProvider, stoppingToken).ConfigureAwait(false);
+                        await Task.Delay(_options.PollingInterval * 2, _timeProvider, stoppingToken).ConfigureAwait(false);
                         continue;
                     }
 
@@ -63,7 +63,7 @@ namespace WorkR.Triggers.AzureStorageQueues
 
                     if (messages.Length == 0)
                     {
-                        await Task.Delay(_config.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
+                        await Task.Delay(_options.PollingInterval, _timeProvider, stoppingToken).ConfigureAwait(false);
                         continue;
                     }
 
@@ -114,19 +114,19 @@ namespace WorkR.Triggers.AzureStorageQueues
         public StorageQueueTrigger(
             QueueServiceClient queueServiceClient,
             string queueName,
-            StorageQueueTriggerConfig config,
+            StorageQueueTriggerOptions options,
             TimeProvider timeProvider,
             ILogger<StorageQueueTrigger> logger)
         {
             ArgumentNullException.ThrowIfNull(queueServiceClient);
             ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
-            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(options);
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentNullException.ThrowIfNull(logger);
 
             _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext>(
                 _queueClient = queueServiceClient.GetQueueClient(queueName),
-                config,
+                options,
                 CreateContext,
                 timeProvider,
                 logger);
@@ -156,21 +156,21 @@ namespace WorkR.Triggers.AzureStorageQueues
         public StorageQueueTrigger(
             QueueServiceClient queueServiceClient,
             string queueName,
-            StorageQueueTriggerConfig config,
+            StorageQueueTriggerOptions options,
             StorageQueueMessageDeserializer<T> deserializer,
             TimeProvider timeProvider,
             ILogger<StorageQueueTrigger<T>> logger)
         {
             ArgumentNullException.ThrowIfNull(queueServiceClient);
             ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
-            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(options);
             ArgumentNullException.ThrowIfNull(deserializer);
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentNullException.ThrowIfNull(logger);
 
             _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext<T>>(
                 _queueClient = queueServiceClient.GetQueueClient(queueName),
-                config,
+                options,
                 CreateContext,
                 timeProvider,
                 logger);

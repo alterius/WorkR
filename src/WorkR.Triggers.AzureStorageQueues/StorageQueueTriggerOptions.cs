@@ -1,6 +1,6 @@
 ﻿namespace WorkR.Triggers.AzureStorageQueues
 {
-    public sealed class StorageQueueTriggerConfig
+    public sealed class StorageQueueTriggerOptions
     {
         public TimeSpan PollingInterval { get; init; } = TimeSpan.FromSeconds(5);
         public TimeSpan VisibilityTimeout { get; init; } = TimeSpan.FromSeconds(30);
