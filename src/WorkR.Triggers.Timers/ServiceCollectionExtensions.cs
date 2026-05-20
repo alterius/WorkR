@@ -39,15 +39,15 @@ namespace WorkR.Triggers.Timers
             string schedule,
             WorkerPipelineBuilderDelegate<TimerTrigger, EmptyTriggerContext> builder,
             bool runOnStartup = false,
-            CrontabSchedule.ParseOptions? parseOptions = null)
+            bool includeSeconds = false)
         {
             services.TryAddSingleton(TimeProvider.System);
 
             var cronTabSchedule = CrontabSchedule.Parse(
                 schedule,
-                parseOptions ?? new CrontabSchedule.ParseOptions
+                new CrontabSchedule.ParseOptions
                 {
-                    IncludingSeconds = false
+                    IncludingSeconds = includeSeconds
                 });
 
             return services.AddWorker(
@@ -63,7 +63,7 @@ namespace WorkR.Triggers.Timers
             this IServiceCollection services,
             string schedule,
             bool runOnStartup = false,
-            CrontabSchedule.ParseOptions? parseOptions = null,
+            bool includeSeconds = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
@@ -72,7 +72,7 @@ namespace WorkR.Triggers.Timers
                 schedule,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
                 runOnStartup,
-                parseOptions);
+                includeSeconds);
         }
     }
 }

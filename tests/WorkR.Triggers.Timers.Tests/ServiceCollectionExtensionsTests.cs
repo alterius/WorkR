@@ -73,7 +73,7 @@ namespace WorkR.Triggers.Timers.Tests
 
             services.AddScheduledWorker("0 * * * * *",
                 builder => builder.AddWorker<FakeWorker>(),
-                parseOptions: new CrontabSchedule.ParseOptions { IncludingSeconds = true });
+                includeSeconds: true);
 
             services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
         }

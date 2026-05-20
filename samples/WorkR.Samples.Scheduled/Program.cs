@@ -1,7 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NCrontab;
 using WorkR.Triggers.Timers;
 
 namespace WorkR.Samples.Scheduled
@@ -20,10 +18,7 @@ namespace WorkR.Samples.Scheduled
 
             builder.Services.AddScheduledWorker<HelloWorldWorker>(
                 "*/5 * * * * *",
-                parseOptions: new CrontabSchedule.ParseOptions
-                {
-                    IncludingSeconds = true
-                });
+                includeSeconds: true);
 
             var host = builder.Build();
             host.Run();
