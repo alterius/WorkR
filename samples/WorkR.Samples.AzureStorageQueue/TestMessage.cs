@@ -1,12 +1,9 @@
 ﻿namespace WorkR.Samples.AzureStorageQueue
 {
-    internal partial class Program
+    public record TestMessage
     {
-        public record TestMessage
-        {
-            public required Guid ExecutionId { get; init; }
-            public required DateTimeOffset OccurredAt { get; init; }
-            public required string Value { get; init; }
-        }
+        public required Guid ExecutionId { get; init; }
+        public required DateTimeOffset OccurredAt { get; init; }
+        public required string Value { get; init; }
     }
 }

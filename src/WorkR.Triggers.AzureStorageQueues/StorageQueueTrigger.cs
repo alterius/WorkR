@@ -112,18 +112,25 @@ namespace WorkR.Triggers.AzureStorageQueues
         private readonly TimeProvider _timeProvider;
 
         public StorageQueueTrigger(
-            QueueClient queueClient,
+            QueueServiceClient queueServiceClient,
+            string queueName,
             StorageQueueTriggerConfig config,
             TimeProvider timeProvider,
             ILogger<StorageQueueTrigger> logger)
         {
-            ArgumentNullException.ThrowIfNull(queueClient);
+            ArgumentNullException.ThrowIfNull(queueServiceClient);
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
             ArgumentNullException.ThrowIfNull(config);
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentNullException.ThrowIfNull(logger);
 
-            _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext>(queueClient, config, CreateContext, timeProvider, logger);
-            _queueClient = queueClient;
+            _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext>(
+                _queueClient = queueServiceClient.GetQueueClient(queueName),
+                config,
+                CreateContext,
+                timeProvider,
+                logger);
+
             _timeProvider = timeProvider;
         }
 
@@ -147,20 +154,27 @@ namespace WorkR.Triggers.AzureStorageQueues
         private readonly TimeProvider _timeProvider;
 
         public StorageQueueTrigger(
-            QueueClient queueClient,
+            QueueServiceClient queueServiceClient,
+            string queueName,
             StorageQueueTriggerConfig config,
             StorageQueueMessageDeserializer<T> deserializer,
             TimeProvider timeProvider,
             ILogger<StorageQueueTrigger<T>> logger)
         {
-            ArgumentNullException.ThrowIfNull(queueClient);
+            ArgumentNullException.ThrowIfNull(queueServiceClient);
+            ArgumentException.ThrowIfNullOrWhiteSpace(queueName);
             ArgumentNullException.ThrowIfNull(config);
             ArgumentNullException.ThrowIfNull(deserializer);
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentNullException.ThrowIfNull(logger);
 
-            _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext<T>>(queueClient, config, CreateContext, timeProvider, logger);
-            _queueClient = queueClient;
+            _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext<T>>(
+                _queueClient = queueServiceClient.GetQueueClient(queueName),
+                config,
+                CreateContext,
+                timeProvider,
+                logger);
+
             _deserializer = deserializer;
             _timeProvider = timeProvider;
         }

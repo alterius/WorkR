@@ -3,22 +3,19 @@ using WorkR.Triggers.AzureStorageQueues;
 
 namespace WorkR.Samples.AzureStorageQueue
 {
-    internal partial class Program
+    public class LogMessageWorker<T> : IWorker<StorageQueueTriggerContext<T>>
     {
-        public class LogMessageWorker<T> : IWorker<StorageQueueTriggerContext<T>>
+        private readonly ILogger _logger;
+
+        public LogMessageWorker(ILogger<LogMessageWorker<T>> logger)
         {
-            private readonly ILogger _logger;
+            _logger = logger;
+        }
 
-            public LogMessageWorker(ILogger<LogMessageWorker<T>> logger)
-            {
-                _logger = logger;
-            }
-
-            public async Task Execute(StorageQueueTriggerContext<T> source, CancellationToken ct)
-            {
-                _logger.LogInformation("Message with id {messageId} is {message}", source.Message.MessageId, source.Value);
-                await source.DeleteMessageAsync(ct);
-            }
+        public async Task Execute(StorageQueueTriggerContext<T> source, CancellationToken ct)
+        {
+            _logger.LogInformation("Message with id {messageId} is {message}", source.Message.MessageId, source.Value);
+            await source.DeleteMessageAsync(ct);
         }
     }
 }

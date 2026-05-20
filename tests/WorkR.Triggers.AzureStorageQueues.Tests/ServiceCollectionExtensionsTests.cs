@@ -9,13 +9,16 @@ namespace WorkR.Triggers.AzureStorageQueues.Tests;
 [Trait("Category", "L0")]
 public class ServiceCollectionExtensionsTests
 {
+    private const string QueueName = "test-queue";
+
     [Fact]
     public void AddStorageQueueTrigger_WithBuilder_RegistersHostedService()
     {
         var services = new ServiceCollection();
 
         services.AddStorageQueueTrigger(
-            _ => Substitute.For<QueueClient>(),
+            _ => Substitute.For<QueueServiceClient>(),
+            QueueName,
             builder => builder.AddWorker<FakeWorker>());
 
         services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
@@ -26,7 +29,7 @@ public class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.AddStorageQueueTrigger<FakeWorker>(_ => Substitute.For<QueueClient>());
+        services.AddStorageQueueTrigger<FakeWorker>(_ => Substitute.For<QueueServiceClient>(), QueueName);
 
         services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
     }
@@ -37,7 +40,8 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         services.AddStorageQueueTrigger<string>(
-            _ => Substitute.For<QueueClient>(),
+            _ => Substitute.For<QueueServiceClient>(),
+            QueueName,
             builder => builder.AddWorker<FakeTypedWorker>());
 
         services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
@@ -48,7 +52,7 @@ public class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.AddStorageQueueTrigger<string, FakeTypedWorker>(_ => Substitute.For<QueueClient>());
+        services.AddStorageQueueTrigger<string, FakeTypedWorker>(_ => Substitute.For<QueueServiceClient>(), QueueName);
 
         services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
     }
@@ -58,7 +62,7 @@ public class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.AddStorageQueueTrigger<FakeWorker>(_ => Substitute.For<QueueClient>());
+        services.AddStorageQueueTrigger<FakeWorker>(_ => Substitute.For<QueueServiceClient>(), QueueName);
 
         services.ShouldContain(d => d.ServiceType == typeof(TimeProvider));
     }
@@ -70,7 +74,7 @@ public class ServiceCollectionExtensionsTests
         var customProvider = new CustomTimeProvider();
         services.AddSingleton<TimeProvider>(customProvider);
 
-        services.AddStorageQueueTrigger<FakeWorker>(_ => Substitute.For<QueueClient>());
+        services.AddStorageQueueTrigger<FakeWorker>(_ => Substitute.For<QueueServiceClient>(), QueueName);
 
         var sp = services.BuildServiceProvider();
         sp.GetRequiredService<TimeProvider>().ShouldBeSameAs(customProvider);
@@ -84,6 +88,19 @@ public class ServiceCollectionExtensionsTests
         Should.Throw<ArgumentNullException>(() =>
             services.AddStorageQueueTrigger(
                 null!,
+                QueueName,
+                builder => builder.AddWorker<FakeWorker>()));
+    }
+
+    [Fact]
+    public void AddStorageQueueTrigger_WithBuilder_WhenQueueNameIsNull_Throws()
+    {
+        var services = new ServiceCollection();
+
+        Should.Throw<ArgumentException>(() =>
+            services.AddStorageQueueTrigger(
+                _ => Substitute.For<QueueServiceClient>(),
+                null!,
                 builder => builder.AddWorker<FakeWorker>()));
     }
 
@@ -93,7 +110,7 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         Should.Throw<ArgumentNullException>(() =>
-            services.AddStorageQueueTrigger<FakeWorker>(null!));
+            services.AddStorageQueueTrigger<FakeWorker>(null!, QueueName));
     }
 
     [Fact]
@@ -104,6 +121,7 @@ public class ServiceCollectionExtensionsTests
         Should.Throw<ArgumentNullException>(() =>
             services.AddStorageQueueTrigger<string>(
                 null!,
+                QueueName,
                 builder => builder.AddWorker<FakeTypedWorker>()));
     }
 
@@ -113,7 +131,7 @@ public class ServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         Should.Throw<ArgumentNullException>(() =>
-            services.AddStorageQueueTrigger<string, FakeTypedWorker>(null!));
+            services.AddStorageQueueTrigger<string, FakeTypedWorker>(null!, QueueName));
     }
 
     private sealed class FakeWorker : IWorker<StorageQueueTriggerContext>

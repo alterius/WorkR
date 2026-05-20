@@ -23,7 +23,8 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
     [Fact]
     public async Task WorkerIsInvoked_WhenMessageArrivesInQueue()
     {
-        var queueClient = await CreateQueueWithMessageAsync("worker-invoked", new Payload("hello"));
+        const string queueName = "worker-invoked";
+        await CreateQueueWithMessageAsync(queueName, new Payload("hello"));
         var received = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         using var host = new HostBuilder()
@@ -31,7 +32,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
             {
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(received);
-                services.AddStorageQueueTrigger<Payload, CapturingWorker>(_ => queueClient);
+                services.AddStorageQueueTrigger<Payload, CapturingWorker>(_ => _azurite.QueueServiceClient, queueName);
             })
             .Build();
 
@@ -45,7 +46,8 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
     [Fact]
     public async Task EachMessageIsProcessedInItsOwnScope()
     {
-        var queueClient = _azurite.CreateQueue("scoped-messages");
+        const string queueName = "scoped-messages";
+        var queueClient = _azurite.CreateQueue(queueName);
         await queueClient.SendMessageAsync(JsonSerializer.Serialize(new Payload("a")), TestContext.Current.CancellationToken);
         await queueClient.SendMessageAsync(JsonSerializer.Serialize(new Payload("b")), TestContext.Current.CancellationToken);
         var scopeLog = new ScopeLog(expectedCount: 2);
@@ -56,7 +58,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(scopeLog);
                 services.AddScoped<ScopedId>();
-                services.AddStorageQueueTrigger<Payload, ScopeCapturingWorker>(_ => queueClient);
+                services.AddStorageQueueTrigger<Payload, ScopeCapturingWorker>(_ => _azurite.QueueServiceClient, queueName);
             })
             .Build();
 
@@ -71,7 +73,8 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
     [Fact]
     public async Task WorkerCanDeleteMessage_AndMessageDoesNotReappear()
     {
-        var queueClient = await CreateQueueWithMessageAsync("delete-message", new Payload("delete-me"));
+        const string queueName = "delete-message";
+        var queueClient = await CreateQueueWithMessageAsync(queueName, new Payload("delete-me"));
         var deleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         using var host = new HostBuilder()
@@ -79,7 +82,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
             {
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(deleted);
-                services.AddStorageQueueTrigger<Payload, DeletingWorker>(_ => queueClient);
+                services.AddStorageQueueTrigger<Payload, DeletingWorker>(_ => _azurite.QueueServiceClient, queueName);
             })
             .Build();
 
@@ -96,7 +99,8 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
     [Fact]
     public async Task CustomDeserializer_IsUsedWhenProvided()
     {
-        var queueClient = _azurite.CreateQueue("custom-deserializer");
+        const string queueName = "custom-deserializer";
+        var queueClient = _azurite.CreateQueue(queueName);
         await queueClient.SendMessageAsync("raw-body", TestContext.Current.CancellationToken);
         var received = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -106,7 +110,8 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(received);
                 services.AddStorageQueueTrigger<string, StringCapturingWorker>(
-                    _ => queueClient,
+                    _ => _azurite.QueueServiceClient,
+                    queueName,
                     deserializerFactory: _ => msg => Task.FromResult(msg.Body.ToString().ToUpper()));
             })
             .Build();

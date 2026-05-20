@@ -1,55 +1,63 @@
-﻿using Azure.Storage.Queues;
+using Azure.Storage.Queues;
 using Microsoft.Extensions.Azure;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NCrontab;
+using Testcontainers.Azurite;
 using WorkR.Triggers.AzureStorageQueues;
 using WorkR.Triggers.Timers;
 
 namespace WorkR.Samples.AzureStorageQueue
 {
-    internal partial class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            var builder = Host.CreateApplicationBuilder(args);
+            var container = new AzuriteBuilder("mcr.microsoft.com/azure-storage/azurite:3.35.0")
+                .Build();
 
-            builder.Logging.AddSimpleConsole(options =>
+            await container.StartAsync();
+
+            await using (container)
             {
-                options.IncludeScopes = true;
-                options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
-            });
+                const string queueName = "test-messages";
 
-            const string queueName = "test-messages";
+                var builder = Host.CreateApplicationBuilder(args);
 
-            builder.Services.AddAzureClients(azureBuilder =>
-            {
-                azureBuilder.AddQueueServiceClient(
-                    builder.Configuration.GetConnectionString("StorageConnectionString"));
-            });
-
-            builder.Services.AddSingleton(sp =>
-            {
-                var serviceClient = sp.GetRequiredService<QueueServiceClient>();
-                var queueClient = serviceClient.GetQueueClient(queueName);
-                queueClient.CreateIfNotExists();
-                return queueClient;
-            });
-
-            builder.Services.AddScheduledWorker<SendTestMessageWorker>(
-                "*/5 * * * * *",
-                parseOptions: new CrontabSchedule.ParseOptions
+                builder.Logging.AddSimpleConsole(options =>
                 {
-                    IncludingSeconds = true
+                    options.IncludeScopes = true;
+                    options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
                 });
 
-            builder.Services.AddStorageQueueTrigger<TestMessage, LogMessageWorker<TestMessage>>(
-                sp => sp.GetRequiredService<QueueClient>());
+                builder.Services.AddAzureClients(azureBuilder =>
+                {
+                    azureBuilder.AddQueueServiceClient(container.GetConnectionString());
+                });
 
-            var host = builder.Build();
-            host.Run();
+                builder.Services.AddSingleton(sp =>
+                    sp.GetRequiredService<QueueServiceClient>()
+                        .GetQueueClient(queueName));
+
+                builder.Services.AddScheduledWorker<SendTestMessageWorker>(
+                    "*/5 * * * * *",
+                    parseOptions: new CrontabSchedule.ParseOptions
+                    {
+                        IncludingSeconds = true
+                    });
+
+                builder.Services.AddStorageQueueTrigger<TestMessage, LogMessageWorker<TestMessage>>(
+                    sp => sp.GetRequiredService<QueueServiceClient>(),
+                    queueName);
+
+                var host = builder.Build();
+
+                await host.Services.GetRequiredService<QueueClient>()
+                    .CreateIfNotExistsAsync();
+
+                await host.RunAsync();
+            }
         }
     }
 }

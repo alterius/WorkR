@@ -9,10 +9,12 @@ public sealed class AzuriteFixture : IAsyncLifetime
 
     public string ConnectionString => _container.GetConnectionString();
 
+    public QueueServiceClient QueueServiceClient =>
+        new(ConnectionString, new QueueClientOptions(QueueClientOptions.ServiceVersion.V2023_11_03));
+
     public QueueClient CreateQueue(string name)
     {
-        var options = new QueueClientOptions(QueueClientOptions.ServiceVersion.V2023_11_03);
-        var client = new QueueClient(ConnectionString, name, options);
+        var client = QueueServiceClient.GetQueueClient(name);
         client.CreateIfNotExists();
         return client;
     }
