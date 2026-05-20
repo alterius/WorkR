@@ -47,7 +47,7 @@ namespace WorkR.Samples.AzureStorageQueue
                         IncludingSeconds = true
                     });
 
-                builder.Services.AddStorageQueueTrigger<TestMessage, LogMessageWorker<TestMessage>>(
+                builder.Services.AddStorageQueueWorker<TestMessage, LogMessageWorker<TestMessage>>(
                     sp => sp.GetRequiredService<QueueServiceClient>(),
                     queueName);
 

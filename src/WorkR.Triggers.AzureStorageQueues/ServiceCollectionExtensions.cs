@@ -8,7 +8,7 @@ namespace WorkR.Triggers.AzureStorageQueues
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddStorageQueueTrigger(
+        public static IServiceCollection AddStorageQueueWorker(
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
             string queueName,
@@ -38,7 +38,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
         }
 
-        public static IServiceCollection AddStorageQueueTrigger<TWorker>(
+        public static IServiceCollection AddStorageQueueWorker<TWorker>(
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
             string queueName,
@@ -47,14 +47,14 @@ namespace WorkR.Triggers.AzureStorageQueues
             Action<StorageQueueTriggerOptions>? configure = null)
                 where TWorker : IWorker<StorageQueueTriggerContext>
         {
-            return services.AddStorageQueueTrigger(
+            return services.AddStorageQueueWorker(
                 queueServiceClientFactory,
                 queueName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
                 configure);
         }
 
-        public static IServiceCollection AddStorageQueueTrigger<T>(
+        public static IServiceCollection AddStorageQueueWorker<T>(
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
             string queueName,
@@ -86,7 +86,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
         }
 
-        public static IServiceCollection AddStorageQueueTrigger<T, TWorker>(
+        public static IServiceCollection AddStorageQueueWorker<T, TWorker>(
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
             string queueName,
@@ -96,7 +96,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             Func<IServiceProvider, StorageQueueMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<StorageQueueTriggerContext<T>>
         {
-            return services.AddStorageQueueTrigger(
+            return services.AddStorageQueueWorker(
                 queueServiceClientFactory,
                 queueName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),

@@ -32,7 +32,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
             {
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(received);
-                services.AddStorageQueueTrigger<Payload, CapturingWorker>(_ => _azurite.QueueServiceClient, queueName);
+                services.AddStorageQueueWorker<Payload, CapturingWorker>(_ => _azurite.QueueServiceClient, queueName);
             })
             .Build();
 
@@ -58,7 +58,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(scopeLog);
                 services.AddScoped<ScopedId>();
-                services.AddStorageQueueTrigger<Payload, ScopeCapturingWorker>(_ => _azurite.QueueServiceClient, queueName);
+                services.AddStorageQueueWorker<Payload, ScopeCapturingWorker>(_ => _azurite.QueueServiceClient, queueName);
             })
             .Build();
 
@@ -82,7 +82,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
             {
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(deleted);
-                services.AddStorageQueueTrigger<Payload, DeletingWorker>(_ => _azurite.QueueServiceClient, queueName);
+                services.AddStorageQueueWorker<Payload, DeletingWorker>(_ => _azurite.QueueServiceClient, queueName);
             })
             .Build();
 
@@ -109,7 +109,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
             {
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(received);
-                services.AddStorageQueueTrigger<string, StringCapturingWorker>(
+                services.AddStorageQueueWorker<string, StringCapturingWorker>(
                     _ => _azurite.QueueServiceClient,
                     queueName,
                     deserializerFactory: _ => msg => Task.FromResult(msg.Body.ToString().ToUpper()));
