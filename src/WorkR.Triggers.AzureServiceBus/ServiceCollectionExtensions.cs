@@ -8,7 +8,7 @@ namespace WorkR.Triggers.AzureServiceBus
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddServiceBusTrigger(
+        public static IServiceCollection AddServiceBusWorker(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
@@ -35,7 +35,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
         }
 
-        public static IServiceCollection AddServiceBusTrigger<TWorker>(
+        public static IServiceCollection AddServiceBusWorker<TWorker>(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
@@ -44,14 +44,14 @@ namespace WorkR.Triggers.AzureServiceBus
             Action<ServiceBusProcessorOptions>? configure = null)
                 where TWorker : IWorker<ServiceBusTriggerContext>
         {
-            return services.AddServiceBusTrigger(
+            return services.AddServiceBusWorker(
                 clientFactory,
                 queueName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
                 configure);
         }
 
-        public static IServiceCollection AddServiceBusTrigger(
+        public static IServiceCollection AddServiceBusWorker(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string topicName,
@@ -81,7 +81,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
         }
 
-        public static IServiceCollection AddServiceBusTrigger<TWorker>(
+        public static IServiceCollection AddServiceBusWorker<TWorker>(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string topicName,
@@ -91,7 +91,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Action<ServiceBusProcessorOptions>? configure = null)
                 where TWorker : IWorker<ServiceBusTriggerContext>
         {
-            return services.AddServiceBusTrigger(
+            return services.AddServiceBusWorker(
                 clientFactory,
                 topicName,
                 subscriptionName,
@@ -99,7 +99,7 @@ namespace WorkR.Triggers.AzureServiceBus
                 configure);
         }
 
-        public static IServiceCollection AddServiceBusTrigger<T>(
+        public static IServiceCollection AddServiceBusWorker<T>(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
@@ -128,7 +128,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
         }
 
-        public static IServiceCollection AddServiceBusTrigger<T, TWorker>(
+        public static IServiceCollection AddServiceBusWorker<T, TWorker>(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
@@ -138,7 +138,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<ServiceBusTriggerContext<T>>
         {
-            return services.AddServiceBusTrigger(
+            return services.AddServiceBusWorker(
                 clientFactory,
                 queueName,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
@@ -146,7 +146,7 @@ namespace WorkR.Triggers.AzureServiceBus
                 deserializerFactory);
         }
 
-        public static IServiceCollection AddServiceBusTrigger<T>(
+        public static IServiceCollection AddServiceBusWorker<T>(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string topicName,
@@ -178,7 +178,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
         }
 
-        public static IServiceCollection AddServiceBusTrigger<T, TWorker>(
+        public static IServiceCollection AddServiceBusWorker<T, TWorker>(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string topicName,
@@ -189,7 +189,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<ServiceBusTriggerContext<T>>
         {
-            return services.AddServiceBusTrigger(
+            return services.AddServiceBusWorker(
                 clientFactory,
                 topicName,
                 subscriptionName,

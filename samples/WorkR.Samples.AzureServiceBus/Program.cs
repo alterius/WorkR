@@ -51,7 +51,7 @@ namespace WorkR.Samples.AzureServiceBus
                         IncludingSeconds = true
                     });
 
-                builder.Services.AddServiceBusTrigger<TestMessage, LogMessageWorker<TestMessage>>(
+                builder.Services.AddServiceBusWorker<TestMessage, LogMessageWorker<TestMessage>>(
                     sp => sp.GetRequiredService<ServiceBusClient>(),
                     queueName);
 
