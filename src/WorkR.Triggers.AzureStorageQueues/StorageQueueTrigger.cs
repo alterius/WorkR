@@ -154,7 +154,15 @@ namespace WorkR.Triggers.AzureStorageQueues
 
         internal async Task DeleteMessageAsync(QueueMessage message, CancellationToken cancellationToken)
         {
-            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken).ConfigureAwait(false);
+            }
+            catch (RequestFailedException ex)
+                when (ex.Status == 404 && ex.ErrorCode == "MessageNotFound")
+            {
+                // Already deleted
+            }
         }
 
         internal async Task DeadLetterMessageAsync(QueueMessage message, CancellationToken cancellationToken)

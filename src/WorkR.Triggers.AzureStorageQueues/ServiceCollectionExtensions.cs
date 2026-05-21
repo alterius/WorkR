@@ -8,6 +8,10 @@ namespace WorkR.Triggers.AzureStorageQueues
 {
     public static class ServiceCollectionExtensions
     {
+        private static readonly Action<MiddlewarePipelineBuilder> _defaultMiddleware = static mw =>
+            mw.UseFireAndForget()
+                .UseScope();
+
         public static IServiceCollection AddStorageQueueWorker(
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
@@ -32,9 +36,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<StorageQueueTrigger>>()),
                 builder,
-                static mw => mw
-                    .UseFireAndForget()
-                    .UseScope());
+                _defaultMiddleware);
         }
 
         public static IServiceCollection AddStorageQueueWorker<TWorker>(
@@ -79,9 +81,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<StorageQueueTrigger<T>>>()),
                 builder,
-                static mw => mw
-                    .UseFireAndForget()
-                    .UseScope());
+                _defaultMiddleware);
         }
 
         public static IServiceCollection AddStorageQueueWorker<T, TWorker>(

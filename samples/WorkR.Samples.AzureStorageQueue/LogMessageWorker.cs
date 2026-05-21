@@ -12,10 +12,10 @@ namespace WorkR.Samples.AzureStorageQueue
             _logger = logger;
         }
 
-        public async Task Execute(StorageQueueTriggerContext<T> source, CancellationToken ct)
+        public Task Execute(StorageQueueTriggerContext<T> source, CancellationToken ct)
         {
             _logger.LogInformation("Message with id {messageId} is {message}", source.Message.MessageId, source.Value);
-            await source.DeleteMessageAsync(ct);
+            return Task.CompletedTask;
         }
     }
 }
