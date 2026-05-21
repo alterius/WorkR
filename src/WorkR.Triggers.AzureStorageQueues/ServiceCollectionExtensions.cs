@@ -34,8 +34,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                 builder,
                 static mw => mw
                     .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                    .UseScope());
         }
 
         public static IServiceCollection AddStorageQueueWorker<TWorker>(
@@ -82,8 +81,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                 builder,
                 static mw => mw
                     .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                    .UseScope());
         }
 
         public static IServiceCollection AddStorageQueueWorker<T, TWorker>(

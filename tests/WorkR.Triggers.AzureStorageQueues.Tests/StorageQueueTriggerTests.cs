@@ -1,6 +1,7 @@
 using Azure;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
@@ -34,6 +35,9 @@ public class StorageQueueTriggerTests
     }
 
     private static Response<QueueMessage[]> EmptyResponse() => MessagesResponse();
+
+    private static StorageQueueTrigger MakeTrigger(QueueServiceClient serviceClient, StorageQueueTriggerOptions? options = null) =>
+        new(serviceClient, QueueName, options ?? DefaultOptions, new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger>());
 
     // ---------------------------------------------------------------------------
     // Constructor guards
@@ -81,7 +85,7 @@ public class StorageQueueTriggerTests
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(emptyResponse);
         using var cts = new CancellationTokenSource();
-        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger>());
+        var trigger = MakeTrigger(serviceClient);
         var invoked = false;
 
         var executeTask = trigger.Execute((ctx, ct) => { invoked = true; return Task.CompletedTask; }, cts.Token);
@@ -104,7 +108,7 @@ public class StorageQueueTriggerTests
         var invocations = new List<string>();
         var bothInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var cts = new CancellationTokenSource();
-        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger>());
+        var trigger = MakeTrigger(serviceClient);
 
         var executeTask = trigger.Execute((ctx, ct) =>
         {
@@ -249,7 +253,6 @@ public class StorageQueueTriggerTests
             .Returns(_ =>
             {
                 callCount++;
-                // first call: error, second call: success (empty), third+ call: error again
                 if (callCount == 1 || callCount >= 3) throw new RequestFailedException(429, "Transient");
                 return EmptyResponse();
             });
@@ -269,14 +272,13 @@ public class StorageQueueTriggerTests
 
         var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
-        timeProvider.Advance(TimeSpan.FromSeconds(1)); // clears first error delay
-        timeProvider.Advance(TimeSpan.FromSeconds(1)); // clears empty poll delay
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
         await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
-        // first error sees count=0, after successful receive count resets, next error sees count=0 again
         capturedCounts.Take(2).ShouldBe([0, 0]);
     }
 
@@ -323,7 +325,6 @@ public class StorageQueueTriggerTests
             .Returns(_ =>
             {
                 pollCount++;
-                // first poll: empty, second poll: has message, third+ poll: empty
                 return pollCount == 2 ? MessagesResponse(MakeMessage()) : EmptyResponse();
             });
         var timeProvider = new FakeTimeProvider(StartTime);
@@ -341,13 +342,12 @@ public class StorageQueueTriggerTests
 
         var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
-        timeProvider.Advance(TimeSpan.FromSeconds(1)); // advances past first empty delay
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
         await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
-        // first empty poll sees count=0, after message received count resets, third empty poll sees count=0 again
         capturedCounts.Take(2).ShouldBe([0, 0]);
     }
 
@@ -359,7 +359,7 @@ public class StorageQueueTriggerTests
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(emptyResponse);
         using var cts = new CancellationTokenSource();
-        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger>());
+        var trigger = MakeTrigger(serviceClient);
 
         var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
@@ -383,7 +383,7 @@ public class StorageQueueTriggerTests
         var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         DateTimeOffset? capturedOccurredAt = null;
         using var cts = new CancellationTokenSource();
-        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger>());
+        var trigger = MakeTrigger(serviceClient);
 
         var executeTask = trigger.Execute((ctx, ct) =>
         {
@@ -410,7 +410,7 @@ public class StorageQueueTriggerTests
         var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         string? capturedId = null;
         using var cts = new CancellationTokenSource();
-        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger>());
+        var trigger = MakeTrigger(serviceClient);
 
         var executeTask = trigger.Execute((ctx, ct) =>
         {
@@ -432,14 +432,13 @@ public class StorageQueueTriggerTests
         var (serviceClient, queueClient) = SubClients();
         var firstResponse = MessagesResponse(MakeMessage(messageId: "del-id", popReceipt: "del-pop"));
         var emptyResponse = EmptyResponse();
-        var deleteResponse = Substitute.For<Response>();
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(firstResponse, emptyResponse);
         queueClient.DeleteMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(deleteResponse);
+            .Returns(Substitute.For<Response>());
         var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var cts = new CancellationTokenSource();
-        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger>());
+        var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { AutoCompleteMessages = false });
 
         var executeTask = trigger.Execute(async (ctx, ct) =>
         {
@@ -452,6 +451,242 @@ public class StorageQueueTriggerTests
         await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
         await queueClient.Received(1).DeleteMessageAsync("del-id", "del-pop", Arg.Any<CancellationToken>());
+    }
+
+    // ---------------------------------------------------------------------------
+    // Error behaviour
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task WhenNextThrows_DoesNotStopLoop()
+    {
+        var (serviceClient, queueClient) = SubClients();
+        var messages = new[] { MakeMessage(messageId: "a"), MakeMessage(messageId: "b") };
+        var firstResponse = MessagesResponse(messages);
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(firstResponse, emptyResponse);
+        var callCount = 0;
+        var secondCallDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient);
+
+        var executeTask = trigger.Execute((_, _) =>
+        {
+            callCount++;
+            if (callCount >= 2) secondCallDone.TrySetResult();
+            throw new InvalidOperationException();
+        }, cts.Token);
+
+        await secondCallDone.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        callCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task WhenNextThrows_LogsError()
+    {
+        var (serviceClient, queueClient) = SubClients();
+        var firstResponse = MessagesResponse(MakeMessage());
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(firstResponse, emptyResponse);
+        var logged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var logger = new FakeLogger<StorageQueueTrigger>();
+        using var cts = new CancellationTokenSource();
+        var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), logger);
+
+        var executeTask = trigger.Execute((_, _) =>
+        {
+            logged.TrySetResult();
+            throw new InvalidOperationException("boom");
+        }, cts.Token);
+
+        await logged.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
+    }
+
+    [Fact]
+    public async Task WhenNextThrowsOperationCancelledAndTokenCancelled_Propagates()
+    {
+        var (serviceClient, queueClient) = SubClients();
+        var firstResponse = MessagesResponse(MakeMessage());
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(firstResponse, emptyResponse);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient);
+
+        var executeTask = trigger.Execute((_, ct) =>
+        {
+            cts.Cancel();
+            ct.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        }, cts.Token);
+
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Auto-complete
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task WhenAutoCompleteIsTrue_DeletesMessageAfterSuccess()
+    {
+        var (serviceClient, queueClient) = SubClients();
+        var firstResponse = MessagesResponse(MakeMessage(messageId: "m1", popReceipt: "p1"));
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(firstResponse, emptyResponse);
+        queueClient.DeleteMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<Response>());
+        var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { AutoCompleteMessages = true });
+
+        var executeTask = trigger.Execute((_, _) =>
+        {
+            workerInvoked.TrySetResult();
+            return Task.CompletedTask;
+        }, cts.Token);
+
+        await workerInvoked.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        await queueClient.Received(1).DeleteMessageAsync("m1", "p1", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WhenAutoCompleteIsFalse_DoesNotDeleteMessageAfterSuccess()
+    {
+        var (serviceClient, queueClient) = SubClients();
+        var firstResponse = MessagesResponse(MakeMessage(messageId: "m1", popReceipt: "p1"));
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(firstResponse, emptyResponse);
+        var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { AutoCompleteMessages = false });
+
+        var executeTask = trigger.Execute((_, _) =>
+        {
+            workerInvoked.TrySetResult();
+            return Task.CompletedTask;
+        }, cts.Token);
+
+        await workerInvoked.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        await queueClient.DidNotReceive().DeleteMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    // ---------------------------------------------------------------------------
+    // Dead-letter threshold
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task WhenDequeueCountReachesThreshold_DeadLettersMessage()
+    {
+        var options = new StorageQueueTriggerOptions { DeadLetterThreshold = 3 };
+        var message = QueuesModelFactory.QueueMessage("m1", "p1", BinaryData.FromString("{}"), dequeueCount: 3);
+        var (serviceClient, queueClient) = SubClients();
+        var poisonClient = Substitute.For<QueueClient>();
+        serviceClient.GetQueueClient($"{QueueName}-poison").Returns(poisonClient);
+        var sendResponse = Substitute.For<Response<SendReceipt>>();
+        var firstResponse = MessagesResponse(message);
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(firstResponse, emptyResponse);
+        queueClient.DeleteMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<Response>());
+        var deadLetterSent = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        poisonClient.SendMessageAsync(Arg.Any<BinaryData>(), Arg.Any<TimeSpan?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => { deadLetterSent.TrySetResult(); return sendResponse; });
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient, options);
+
+        var executeTask = trigger.Execute((_, _) => throw new InvalidOperationException("fail"), cts.Token);
+
+        await deadLetterSent.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        await poisonClient.Received(1).SendMessageAsync(Arg.Any<BinaryData>(), Arg.Any<TimeSpan?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
+        await queueClient.Received(1).DeleteMessageAsync("m1", "p1", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WhenDequeueCountBelowThreshold_DoesNotDeadLetterMessage()
+    {
+        var options = new StorageQueueTriggerOptions { DeadLetterThreshold = 3, MaxMessages = 2 };
+        var badMessage = QueuesModelFactory.QueueMessage("m1", "p1", BinaryData.FromString("{}"), dequeueCount: 2);
+        var goodMessage = MakeMessage(messageId: "m2");
+        var (serviceClient, queueClient) = SubClients();
+        var poisonClient = Substitute.For<QueueClient>();
+        serviceClient.GetQueueClient($"{QueueName}-poison").Returns(poisonClient);
+        var batchResponse = MessagesResponse(badMessage, goodMessage);
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(batchResponse, emptyResponse);
+        queueClient.DeleteMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<Response>());
+        var goodMessageProcessed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient, options);
+
+        var executeTask = trigger.Execute((ctx, _) =>
+        {
+            if (ctx.Value.MessageId == "m2") goodMessageProcessed.TrySetResult();
+            if (ctx.Value.MessageId == "m1") throw new InvalidOperationException("fail");
+            return Task.CompletedTask;
+        }, cts.Token);
+
+        await goodMessageProcessed.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        await poisonClient.DidNotReceive().SendMessageAsync(Arg.Any<BinaryData>(), Arg.Any<TimeSpan?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WhenDeadLetterThresholdIsZero_NeverDeadLetters()
+    {
+        var options = new StorageQueueTriggerOptions { DeadLetterThreshold = 0, MaxMessages = 2 };
+        var badMessage = QueuesModelFactory.QueueMessage("m1", "p1", BinaryData.FromString("{}"), dequeueCount: 100);
+        var goodMessage = MakeMessage(messageId: "m2");
+        var (serviceClient, queueClient) = SubClients();
+        var poisonClient = Substitute.For<QueueClient>();
+        serviceClient.GetQueueClient($"{QueueName}-poison").Returns(poisonClient);
+        var batchResponse = MessagesResponse(badMessage, goodMessage);
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(batchResponse, emptyResponse);
+        queueClient.DeleteMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<Response>());
+        var goodMessageProcessed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient, options);
+
+        var executeTask = trigger.Execute((ctx, _) =>
+        {
+            if (ctx.Value.MessageId == "m2") goodMessageProcessed.TrySetResult();
+            if (ctx.Value.MessageId == "m1") throw new InvalidOperationException("fail");
+            return Task.CompletedTask;
+        }, cts.Token);
+
+        await goodMessageProcessed.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        await poisonClient.DidNotReceive().SendMessageAsync(Arg.Any<BinaryData>(), Arg.Any<TimeSpan?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
     }
 }
 
@@ -528,9 +763,8 @@ public class StorageQueueTriggerTypedTests
     [Fact]
     public async Task DeserializedValue_IsExposedOnContext()
     {
-        var message = MakeMessage("""{"Name":"hello"}""");
         var (serviceClient, queueClient) = SubClients();
-        var firstResponse = MessagesResponse(message);
+        var firstResponse = MessagesResponse(MakeMessage("""{"Name":"hello"}"""));
         var emptyResponse = EmptyResponse();
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(firstResponse, emptyResponse);
@@ -559,9 +793,8 @@ public class StorageQueueTriggerTypedTests
     [Fact]
     public async Task RawEnvelopeMessage_IsExposedOnContext()
     {
-        var message = MakeMessage("""{"Name":"hello"}""", messageId: "raw-id");
         var (serviceClient, queueClient) = SubClients();
-        var firstResponse = MessagesResponse(message);
+        var firstResponse = MessagesResponse(MakeMessage("""{"Name":"hello"}""", messageId: "raw-id"));
         var emptyResponse = EmptyResponse();
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(firstResponse, emptyResponse);
@@ -592,15 +825,18 @@ public class StorageQueueTriggerTypedTests
         var badMessage = MakeMessage("not-valid-json", messageId: "bad");
         var goodMessage = MakeMessage("""{"Name":"good"}""", messageId: "good");
         var (serviceClient, queueClient) = SubClients();
+        var options = new StorageQueueTriggerOptions { MaxMessages = 2 };
         var firstResponse = MessagesResponse(badMessage, goodMessage);
         var emptyResponse = EmptyResponse();
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(firstResponse, emptyResponse);
+        queueClient.DeleteMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Substitute.For<Response>());
         var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var deliveredIds = new List<string>();
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger<TestPayload>(
-            serviceClient, QueueName, DefaultOptions, StorageQueueMessageDeserializers.Json<TestPayload>(),
+            serviceClient, QueueName, options, StorageQueueMessageDeserializers.Json<TestPayload>(),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<TestPayload>>());
 
         var executeTask = trigger.Execute((ctx, ct) =>
@@ -620,9 +856,8 @@ public class StorageQueueTriggerTypedTests
     [Fact]
     public async Task WhenCustomDeserializerProvided_UsesItInsteadOfJson()
     {
-        var message = MakeMessage("custom-body");
         var (serviceClient, queueClient) = SubClients();
-        var firstResponse = MessagesResponse(message);
+        var firstResponse = MessagesResponse(MakeMessage("custom-body"));
         var emptyResponse = EmptyResponse();
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(firstResponse, emptyResponse);

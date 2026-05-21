@@ -9,19 +9,27 @@ namespace WorkR.Triggers.AzureStorageQueues
         where TContext : TriggerContext
     {
         private readonly QueueClient _queueClient;
+        private readonly Lazy<QueueClient> _deadLetterQueueClient;
         private readonly StorageQueueTriggerOptions _options;
         private readonly Func<Guid, QueueMessage, Task<TContext>> _contextFactory;
         private readonly TimeProvider _timeProvider;
         private readonly ILogger _logger;
 
         public StorageQueueTriggerBase(
-            QueueClient queueClient,
+            QueueServiceClient queueServiceClient,
+            string queueName,
             StorageQueueTriggerOptions options,
             Func<Guid, QueueMessage, Task<TContext>> contextFactory,
             TimeProvider timeProvider,
             ILogger logger)
         {
-            _queueClient = queueClient;
+            _queueClient = queueServiceClient.GetQueueClient(queueName);
+            _deadLetterQueueClient = new Lazy<QueueClient>(() =>
+            {
+                var deadLetterQueueClient = queueServiceClient.GetQueueClient($"{queueName}-poison");
+                deadLetterQueueClient.CreateIfNotExists();
+                return deadLetterQueueClient;
+            }, LazyThreadSafetyMode.PublicationOnly);
             _options = options;
             _contextFactory = contextFactory;
             _timeProvider = timeProvider;
@@ -101,36 +109,64 @@ namespace WorkR.Triggers.AzureStorageQueues
 
                         _logger.LogDebug("Storage queue trigger executing...");
 
-                        TContext context;
-
                         try
                         {
-                            context = await _contextFactory(executionId, message).ConfigureAwait(false);
+                            var context = await _contextFactory(executionId, message).ConfigureAwait(false);
+
+                            await next(context, stoppingToken).ConfigureAwait(false);
+
+                            if (_options.AutoCompleteMessages)
+                            {
+                                await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, stoppingToken);
+                            }
+
+                            _logger.LogDebug("Storage queue trigger executed");
+                        }
+                        catch (OperationCanceledException)
+                            when (stoppingToken.IsCancellationRequested)
+                        {
+                            throw;
                         }
                         catch (Exception ex)
                         {
-                            // Todo: What to do with poison messages to prevent them from going around and around?
-                            _logger.LogError(ex, "Failed to create trigger context from queue message");
-                            continue;
+                            _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
+
+                            if (_options.DeadLetterThreshold > 0 && message.DequeueCount >= _options.DeadLetterThreshold)
+                            {
+                                try
+                                {
+                                    await DeadLetterMessageAsync(message, CancellationToken.None).ConfigureAwait(false);
+                                }
+                                catch (Exception ex2)
+                                {
+                                    _logger.LogError(ex2, "Failed to dead letter message");
+                                }
+                            }
                         }
-
-                        await next(context, stoppingToken).ConfigureAwait(false);
-
-                        _logger.LogDebug("Storage queue trigger executed");
                     }
                 }
             }
             finally
             {
-                _logger.LogInformation("Storage queue trigger exited");
+                _logger.LogInformation("Storage queue trigger stopped");
             }
+        }
+
+        internal async Task DeleteMessageAsync(QueueMessage message, CancellationToken cancellationToken)
+        {
+            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken).ConfigureAwait(false);
+        }
+
+        internal async Task DeadLetterMessageAsync(QueueMessage message, CancellationToken cancellationToken)
+        {
+            await _deadLetterQueueClient.Value.SendMessageAsync(message.Body, cancellationToken: cancellationToken).ConfigureAwait(false);
+            await DeleteMessageAsync(message, CancellationToken.None).ConfigureAwait(false);
         }
     }
 
     public sealed class StorageQueueTrigger : ITrigger<StorageQueueTriggerContext>
     {
         private readonly StorageQueueTriggerBase<StorageQueueTriggerContext> _inner;
-        private readonly QueueClient _queueClient;
         private readonly TimeProvider _timeProvider;
 
         public StorageQueueTrigger(
@@ -147,12 +183,12 @@ namespace WorkR.Triggers.AzureStorageQueues
             ArgumentNullException.ThrowIfNull(logger);
 
             _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext>(
-                _queueClient = queueServiceClient.GetQueueClient(queueName),
+                queueServiceClient,
+                queueName,
                 options,
                 CreateContext,
                 timeProvider,
                 logger);
-
             _timeProvider = timeProvider;
         }
 
@@ -165,13 +201,13 @@ namespace WorkR.Triggers.AzureStorageQueues
                     executionId,
                     _timeProvider.GetUtcNow(),
                     queueMessage,
-                    async ct => await _queueClient.DeleteMessageAsync(queueMessage.MessageId, queueMessage.PopReceipt, ct).ConfigureAwait(false)));
+                    ct => _inner.DeleteMessageAsync(queueMessage, ct),
+                    ct => _inner.DeadLetterMessageAsync(queueMessage, ct)));
     }
 
     public sealed class StorageQueueTrigger<T> : ITrigger<StorageQueueTriggerContext<T>>
     {
         private readonly StorageQueueTriggerBase<StorageQueueTriggerContext<T>> _inner;
-        private readonly QueueClient _queueClient;
         private readonly StorageQueueMessageDeserializer<T> _deserializer;
         private readonly TimeProvider _timeProvider;
 
@@ -191,7 +227,8 @@ namespace WorkR.Triggers.AzureStorageQueues
             ArgumentNullException.ThrowIfNull(logger);
 
             _inner = new StorageQueueTriggerBase<StorageQueueTriggerContext<T>>(
-                _queueClient = queueServiceClient.GetQueueClient(queueName),
+                queueServiceClient,
+                queueName,
                 options,
                 CreateContext,
                 timeProvider,
@@ -210,6 +247,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                 _timeProvider.GetUtcNow(),
                 await _deserializer(queueMessage).ConfigureAwait(false),
                 queueMessage,
-                async ct => await _queueClient.DeleteMessageAsync(queueMessage.MessageId, queueMessage.PopReceipt, ct).ConfigureAwait(false));
+                ct => _inner.DeleteMessageAsync(queueMessage, ct),
+                ct => _inner.DeadLetterMessageAsync(queueMessage, ct));
     }
 }

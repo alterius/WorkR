@@ -82,7 +82,8 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
             {
                 services.AddLogging(b => b.ClearProviders());
                 services.AddSingleton(deleted);
-                services.AddStorageQueueWorker<Payload, DeletingWorker>(_ => _azurite.QueueServiceClient, queueName);
+                services.AddStorageQueueWorker<Payload, DeletingWorker>(_ => _azurite.QueueServiceClient, queueName,
+                    configure: o => o.AutoCompleteMessages = false);
             })
             .Build();
 

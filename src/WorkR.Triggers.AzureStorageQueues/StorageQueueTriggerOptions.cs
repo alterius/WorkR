@@ -7,25 +7,38 @@
         /// Receives the number of consecutive empty polls, resetting to zero when messages are received.
         /// Defaults to a fixed 5-second delay.
         /// </summary>
-        public StorageQueueDelay PollingDelay { get; init; } = StorageQueueDelayStrategy.Fixed(TimeSpan.FromSeconds(5));
+        public StorageQueueDelay PollingDelay { get; set; } = StorageQueueDelayStrategy.Fixed(TimeSpan.FromSeconds(5));
 
         /// <summary>
         /// Determines how long to wait after a transient error before retrying.
         /// Receives the number of consecutive errors, resetting to zero on a successful receive.
         /// Defaults to a fixed 5-second delay.
         /// </summary>
-        public StorageQueueDelay ErrorDelay { get; init; } = StorageQueueDelayStrategy.Fixed(TimeSpan.FromSeconds(5));
+        public StorageQueueDelay ErrorDelay { get; set; } = StorageQueueDelayStrategy.Fixed(TimeSpan.FromSeconds(5));
 
         /// <summary>
         /// How long a received message remains invisible to other consumers while being processed.
         /// Defaults to 30 seconds.
         /// </summary>
-        public TimeSpan VisibilityTimeout { get; init; } = TimeSpan.FromSeconds(30);
+        public TimeSpan VisibilityTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// The maximum number of messages to retrieve per poll. Must be between 1 and 32.
         /// Defaults to 1.
         /// </summary>
-        public int MaxMessages { get; init; } = 1;
+        public int MaxMessages { get; set; } = 1;
+
+        /// <summary>
+        /// When true, messages are automatically deleted from the queue after successful processing.
+        /// Defaults to true.
+        /// </summary>
+        public bool AutoCompleteMessages { get; set; } = true;
+
+        /// <summary>
+        /// The number of times a message may be dequeued and fail before being dead-lettered.
+        /// Set to 0 to disable automatic dead-lettering.
+        /// Defaults to 5.
+        /// </summary>
+        public int DeadLetterThreshold { get; set; } = 5;
     }
 }
