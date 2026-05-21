@@ -8,6 +8,9 @@ namespace WorkR.Triggers.AzureServiceBus
 {
     public static class ServiceCollectionExtensions
     {
+        private static readonly Action<MiddlewarePipelineBuilder> _defaultMiddleware = static mw =>
+            mw.UseScope();
+
         public static IServiceCollection AddServiceBusWorker(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
@@ -29,10 +32,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<ILogger<ServiceBusTrigger>>(),
                     CreateOptions(configure)),
                 builder,
-                static mw => mw
-                    .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                _defaultMiddleware);
         }
 
         public static IServiceCollection AddServiceBusWorker<TWorker>(
@@ -75,10 +75,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<ILogger<ServiceBusTrigger>>(),
                     CreateOptions(configure)),
                 builder,
-                static mw => mw
-                    .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                _defaultMiddleware);
         }
 
         public static IServiceCollection AddServiceBusWorker<TWorker>(
@@ -122,10 +119,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<ILogger<ServiceBusTrigger<T>>>(),
                     CreateOptions(configure)),
                 builder,
-                static mw => mw
-                    .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                _defaultMiddleware);
         }
 
         public static IServiceCollection AddServiceBusWorker<T, TWorker>(
@@ -172,10 +166,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<ILogger<ServiceBusTrigger<T>>>(),
                     CreateOptions(configure)),
                 builder,
-                static mw => mw
-                    .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                _defaultMiddleware);
         }
 
         public static IServiceCollection AddServiceBusWorker<T, TWorker>(

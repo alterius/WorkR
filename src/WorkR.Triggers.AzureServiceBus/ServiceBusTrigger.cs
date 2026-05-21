@@ -68,7 +68,7 @@ namespace WorkR.Triggers.AzureServiceBus
 
             _serviceBusProcessor.ProcessErrorAsync += args =>
             {
-                _logger.LogError(args.Exception, "Unhandled error when processing service bus trigger message");
+                _logger.LogError(args.Exception, "Service bus processor failed with unhandled exception");
                 return Task.CompletedTask;
             };
 
@@ -76,16 +76,22 @@ namespace WorkR.Triggers.AzureServiceBus
 
             _logger.LogInformation("Service bus trigger initialised");
 
-            await _serviceBusProcessor.StartProcessingAsync(stoppingToken).ConfigureAwait(false);
-
             try
             {
-                await Task.Delay(Timeout.InfiniteTimeSpan, _timeProvider, stoppingToken).ConfigureAwait(false);
+                await _serviceBusProcessor.StartProcessingAsync(stoppingToken).ConfigureAwait(false);
+
+                try
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, _timeProvider, stoppingToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await _serviceBusProcessor.StopProcessingAsync(CancellationToken.None).ConfigureAwait(false);
+                }
             }
             finally
             {
-                await _serviceBusProcessor.StopProcessingAsync(CancellationToken.None).ConfigureAwait(false);
-                _logger.LogInformation("Service bus trigger exited");
+                _logger.LogInformation("Service bus trigger stopped");
             }
         }
 
