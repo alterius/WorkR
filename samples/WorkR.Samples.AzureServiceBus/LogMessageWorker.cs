@@ -12,7 +12,7 @@ namespace WorkR.Samples.AzureServiceBus
             _logger = logger;
         }
 
-        public Task Execute(ServiceBusTriggerContext<T> source, CancellationToken ct)
+        public Task ExecuteAsync(ServiceBusTriggerContext<T> source, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Message with id {messageId} is {message}", source.Args.Message.MessageId, source.Value);
             return Task.CompletedTask;

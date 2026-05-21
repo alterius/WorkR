@@ -12,7 +12,7 @@ namespace WorkR.Samples.AzureServiceBus
             _sender = sender;
         }
 
-        public async Task Execute(EmptyTriggerContext source, CancellationToken ct)
+        public async Task ExecuteAsync(EmptyTriggerContext source, CancellationToken cancellationToken)
         {
             var message = new TestMessage
             {
@@ -24,7 +24,7 @@ namespace WorkR.Samples.AzureServiceBus
             var serviceBusMessage = new ServiceBusMessage(
                 JsonSerializer.SerializeToUtf8Bytes(message));
 
-            await _sender.SendMessageAsync(serviceBusMessage, ct);
+            await _sender.SendMessageAsync(serviceBusMessage, cancellationToken);
         }
     }
 }

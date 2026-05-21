@@ -46,7 +46,7 @@ namespace WorkR.Triggers.AzureServiceBus
         {
         }
 
-        public async Task Execute(WorkerDelegate<TContext> next, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerDelegate<TContext> workerPipeline, CancellationToken stoppingToken)
         {
             _serviceBusProcessor.ProcessMessageAsync += async args =>
             {
@@ -61,7 +61,7 @@ namespace WorkR.Triggers.AzureServiceBus
                 _logger.LogDebug("Service bus trigger executing...");
 
                 var context = await _contextFactory(executionId, args).ConfigureAwait(false);
-                await next(context, args.CancellationToken).ConfigureAwait(false);
+                await workerPipeline(context, args.CancellationToken).ConfigureAwait(false);
 
                 _logger.LogDebug("Service bus trigger executed");
             };
@@ -121,7 +121,7 @@ namespace WorkR.Triggers.AzureServiceBus
             _inner = new ServiceBusTriggerBase<ServiceBusTriggerContext>(
                 serviceBusClient,
                 queueName,
-                CreateContext,
+                CreateContextAsync,
                 timeProvider,
                 logger,
                 options);
@@ -146,22 +146,22 @@ namespace WorkR.Triggers.AzureServiceBus
                 serviceBusClient,
                 topicName,
                 subscriptionName,
-                CreateContext,
+                CreateContextAsync,
                 timeProvider,
                 logger,
                 options);
             _timeProvider = timeProvider;
         }
 
-        public Task Execute(WorkerDelegate<ServiceBusTriggerContext> next, CancellationToken stoppingToken) =>
-            _inner.Execute(next, stoppingToken);
+        public Task ExecuteAsync(WorkerDelegate<ServiceBusTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+            _inner.ExecuteAsync(workerPipeline, stoppingToken);
 
         public async ValueTask DisposeAsync()
         {
             await _inner.DisposeAsync().ConfigureAwait(false);
         }
 
-        private Task<ServiceBusTriggerContext> CreateContext(Guid executionId, ProcessMessageEventArgs args) =>
+        private Task<ServiceBusTriggerContext> CreateContextAsync(Guid executionId, ProcessMessageEventArgs args) =>
             Task.FromResult(new ServiceBusTriggerContext(executionId, _timeProvider.GetUtcNow(), args));
     }
 
@@ -188,7 +188,7 @@ namespace WorkR.Triggers.AzureServiceBus
             _inner = new ServiceBusTriggerBase<ServiceBusTriggerContext<T>>(
                 serviceBusClient,
                 queueName,
-                CreateContext,
+                CreateContextAsync,
                 timeProvider,
                 logger,
                 options);
@@ -216,7 +216,7 @@ namespace WorkR.Triggers.AzureServiceBus
                 serviceBusClient,
                 topicName,
                 subscriptionName,
-                CreateContext,
+                CreateContextAsync,
                 timeProvider,
                 logger,
                 options);
@@ -224,15 +224,15 @@ namespace WorkR.Triggers.AzureServiceBus
             _timeProvider = timeProvider;
         }
 
-        public Task Execute(WorkerDelegate<ServiceBusTriggerContext<T>> next, CancellationToken stoppingToken) =>
-            _inner.Execute(next, stoppingToken);
+        public Task ExecuteAsync(WorkerDelegate<ServiceBusTriggerContext<T>> workerPipeline, CancellationToken stoppingToken) =>
+            _inner.ExecuteAsync(workerPipeline, stoppingToken);
 
         public async ValueTask DisposeAsync()
         {
             await _inner.DisposeAsync().ConfigureAwait(false);
         }
 
-        private async Task<ServiceBusTriggerContext<T>> CreateContext(Guid executionId, ProcessMessageEventArgs args) =>
+        private async Task<ServiceBusTriggerContext<T>> CreateContextAsync(Guid executionId, ProcessMessageEventArgs args) =>
             new(
                 executionId,
                 _timeProvider.GetUtcNow(),
