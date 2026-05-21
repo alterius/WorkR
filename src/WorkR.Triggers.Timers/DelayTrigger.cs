@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace WorkR.Triggers.Timers
 {
@@ -8,7 +8,10 @@ namespace WorkR.Triggers.Timers
         private readonly TimeSpan _delay;
         private readonly ILogger _logger;
 
-        public DelayTrigger(TimeProvider timeProvider, TimeSpan delay, ILogger<DelayTrigger> logger)
+        public DelayTrigger(
+            TimeSpan delay,
+            TimeProvider timeProvider,
+            ILogger<DelayTrigger> logger)
         {
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(delay.Ticks, nameof(delay));
@@ -37,16 +40,27 @@ namespace WorkR.Triggers.Timers
 
                     _logger.LogDebug("Delay trigger executing...");
 
-                    await next(context, stoppingToken).ConfigureAwait(false);
-
-                    _logger.LogDebug("Delay trigger executed");
+                    try
+                    {
+                        await next(context, stoppingToken).ConfigureAwait(false);
+                        _logger.LogDebug("Delay trigger executed");
+                    }
+                    catch (OperationCanceledException)
+                        when (stoppingToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
+                    }
 
                     await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                 }
             }
             finally
             {
-                _logger.LogInformation("Delay trigger exited");
+                _logger.LogInformation("Delay trigger stopped");
             }
         }
     }

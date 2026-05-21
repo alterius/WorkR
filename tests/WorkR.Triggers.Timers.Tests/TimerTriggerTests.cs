@@ -196,7 +196,7 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_LogsExitedOnCancellation()
+        public async Task Execute_LogsStoppedOnCancellation()
         {
             var timeProvider = new FakeTimeProvider(StartTime);
             var logger = new FakeLogger<TimerTrigger>();
@@ -208,10 +208,77 @@ namespace WorkR.Triggers.Timers.Tests
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
-            logger.Collector.GetSnapshot().ShouldContain(log => log.Message.Contains("exited"));
+            logger.Collector.GetSnapshot().ShouldContain(log => log.Message.Contains("stopped"));
         }
 
-        private static TimerTrigger Create(FakeTimeProvider timeProvider, string schedule, bool runOnStartup = false) =>
-            new(CrontabSchedule.Parse(schedule), timeProvider, new FakeLogger<TimerTrigger>(), runOnStartup);
+        [Fact]
+        public async Task Execute_WhenNextThrows_DoesNotStopLoop()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var callCount = 0;
+            using var cts = new CancellationTokenSource();
+
+            var trigger = Create(timeProvider, EveryMinuteSchedule);
+
+            var executeTask = trigger.Execute((_, _) =>
+            {
+                callCount++;
+                if (callCount >= 2)
+                    cts.Cancel();
+                throw new InvalidOperationException();
+            }, cts.Token);
+
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+            await executeTask;
+
+            callCount.ShouldBe(2);
+        }
+
+        [Fact]
+        public async Task Execute_WhenNextThrows_LogsError()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var logger = new FakeLogger<TimerTrigger>();
+            using var cts = new CancellationTokenSource();
+            var trigger = new TimerTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger, runOnStartup: true);
+
+            var executeTask = trigger.Execute((_, _) =>
+            {
+                cts.Cancel();
+                throw new InvalidOperationException("boom");
+            }, cts.Token);
+
+            await executeTask;
+
+            logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
+        }
+
+        [Fact]
+        public async Task Execute_WhenNextThrowsOperationCancelledAndTokenCancelled_Propagates()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            using var cts = new CancellationTokenSource();
+
+            var trigger = Create(timeProvider, EveryMinuteSchedule, runOnStartup: true);
+
+            var executeTask = trigger.Execute((_, ct) =>
+            {
+                cts.Cancel();
+                ct.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            }, cts.Token);
+
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+        }
+
+        private static TimerTrigger Create(
+            FakeTimeProvider timeProvider,
+            string schedule,
+            bool runOnStartup = false) =>
+            new(CrontabSchedule.Parse(schedule),
+                timeProvider,
+                new FakeLogger<TimerTrigger>(),
+                runOnStartup);
     }
 }

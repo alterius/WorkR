@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using WorkR.Middleware;
 
 namespace WorkR
@@ -24,7 +25,11 @@ namespace WorkR
                     defaultMiddleware));
 
             services.AddSingleton<IHostedService>(sp =>
-                ActivatorUtilities.CreateInstance<WorkerService<TTrigger, TContext>>(sp, triggerFactory(sp), pipeline));
+                new WorkerService<TTrigger, TContext>(
+                    sp,
+                    triggerFactory(sp),
+                    pipeline,
+                    sp.GetRequiredService<ILogger<WorkerService<TTrigger, TContext>>>()));
 
             return services;
         }

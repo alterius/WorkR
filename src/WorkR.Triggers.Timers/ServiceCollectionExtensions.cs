@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using NCrontab;
 using WorkR.Middleware;
 
@@ -15,11 +16,13 @@ namespace WorkR.Triggers.Timers
             services.TryAddSingleton(TimeProvider.System);
 
             return services.AddWorker(
-                sp => ActivatorUtilities.CreateInstance<DelayTrigger>(sp, delay),
+                sp => new DelayTrigger(
+                    delay,
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<DelayTrigger>>()),
                 builder,
                 static mw => mw
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                    .UseScope());
         }
 
         public static IServiceCollection AddDelayWorker<TWorker>(
@@ -51,12 +54,15 @@ namespace WorkR.Triggers.Timers
                 });
 
             return services.AddWorker(
-                sp => ActivatorUtilities.CreateInstance<TimerTrigger>(sp, cronTabSchedule, runOnStartup),
+                sp => new TimerTrigger(
+                    cronTabSchedule,
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<TimerTrigger>>(),
+                    runOnStartup),
                 builder,
                 static mw => mw
                     .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                    .UseScope());
         }
 
         public static IServiceCollection AddScheduledWorker<TWorker>(

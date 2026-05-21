@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using NCrontab;
 
 namespace WorkR.Triggers.Timers
@@ -10,7 +10,11 @@ namespace WorkR.Triggers.Timers
         private readonly ILogger _logger;
         private readonly bool _runOnStartup;
 
-        public TimerTrigger(CrontabSchedule schedule, TimeProvider timeProvider, ILogger<TimerTrigger> logger, bool runOnStartup = false)
+        public TimerTrigger(
+            CrontabSchedule schedule,
+            TimeProvider timeProvider,
+            ILogger<TimerTrigger> logger,
+            bool runOnStartup = false)
         {
             ArgumentNullException.ThrowIfNull(schedule);
             ArgumentNullException.ThrowIfNull(timeProvider);
@@ -38,9 +42,20 @@ namespace WorkR.Triggers.Timers
 
                 _logger.LogDebug("Timer trigger executing...");
 
-                await next(context, stoppingToken).ConfigureAwait(false);
-
-                _logger.LogDebug("Timer trigger executed");
+                try
+                {
+                    await next(context, stoppingToken).ConfigureAwait(false);
+                    _logger.LogDebug("Timer trigger executed");
+                }
+                catch (OperationCanceledException)
+                    when (stoppingToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
+                }
             }
 
             try
@@ -54,7 +69,7 @@ namespace WorkR.Triggers.Timers
                 {
                     var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
                     var nextOccurrenceUtc = _schedule.GetNextOccurrence(nowUtc);
-                    var delay = nextOccurrenceUtc - nowUtc;
+                    var delay = TimeSpan.FromTicks(Math.Max((nextOccurrenceUtc - nowUtc).Ticks, 0));
 
                     _logger.LogDebug("Timer trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
 
@@ -64,7 +79,7 @@ namespace WorkR.Triggers.Timers
             }
             finally
             {
-                _logger.LogInformation("Timer trigger exited");
+                _logger.LogInformation("Timer trigger stopped");
             }
         }
     }

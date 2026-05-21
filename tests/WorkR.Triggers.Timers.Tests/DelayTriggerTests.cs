@@ -12,28 +12,28 @@ namespace WorkR.Triggers.Timers.Tests
         public void Constructor_WhenTimeProviderIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new DelayTrigger(null!, TimeSpan.FromSeconds(1), new FakeLogger<DelayTrigger>()));
+                new DelayTrigger(TimeSpan.FromSeconds(1), null!, new FakeLogger<DelayTrigger>()));
         }
 
         [Fact]
         public void Constructor_WhenDelayIsZero_ThrowsArgumentOutOfRangeException()
         {
             Should.Throw<ArgumentOutOfRangeException>(() =>
-                new DelayTrigger(TimeProvider.System, TimeSpan.Zero, new FakeLogger<DelayTrigger>()));
+                new DelayTrigger(TimeSpan.Zero, TimeProvider.System, new FakeLogger<DelayTrigger>()));
         }
 
         [Fact]
         public void Constructor_WhenDelayIsNegative_ThrowsArgumentOutOfRangeException()
         {
             Should.Throw<ArgumentOutOfRangeException>(() =>
-                new DelayTrigger(TimeProvider.System, TimeSpan.FromSeconds(-1), new FakeLogger<DelayTrigger>()));
+                new DelayTrigger(TimeSpan.FromSeconds(-1), TimeProvider.System, new FakeLogger<DelayTrigger>()));
         }
 
         [Fact]
         public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new DelayTrigger(TimeProvider.System, TimeSpan.FromSeconds(1), null!));
+                new DelayTrigger(TimeSpan.FromSeconds(1), TimeProvider.System, null!));
         }
 
         [Fact]
@@ -125,7 +125,7 @@ namespace WorkR.Triggers.Timers.Tests
             var timeProvider = new FakeTimeProvider();
             var logger = new FakeLogger<DelayTrigger>();
             using var cts = new CancellationTokenSource();
-            var trigger = new DelayTrigger(timeProvider, TimeSpan.FromSeconds(60), logger);
+            var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger);
 
             var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
@@ -155,22 +155,92 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_LogsExitedOnCancellation()
+        public async Task Execute_LogsStoppedOnCancellation()
         {
             var timeProvider = new FakeTimeProvider();
             var logger = new FakeLogger<DelayTrigger>();
             using var cts = new CancellationTokenSource();
-            var trigger = new DelayTrigger(timeProvider, TimeSpan.FromSeconds(60), logger);
+            var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger);
 
             var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
-            logger.Collector.GetSnapshot().ShouldContain(log => log.Message.Contains("exited"));
+            logger.Collector.GetSnapshot().ShouldContain(log => log.Message.Contains("stopped"));
         }
 
-        private static DelayTrigger Create(FakeTimeProvider timeProvider, TimeSpan delay) =>
-            new(timeProvider, delay, new FakeLogger<DelayTrigger>());
+        [Fact]
+        public async Task Execute_WhenNextThrows_DoesNotStopLoop()
+        {
+            var timeProvider = new FakeTimeProvider();
+            var callCount = 0;
+            var secondCallDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var cts = new CancellationTokenSource();
+
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+
+            var executeTask = trigger.Execute((_, _) =>
+            {
+                callCount++;
+                if (callCount >= 2)
+                    secondCallDone.TrySetResult();
+                throw new InvalidOperationException();
+            }, cts.Token);
+
+            // First call threw; trigger is now suspended in Task.Delay — advance to fire second call
+            timeProvider.Advance(TimeSpan.FromSeconds(60));
+            await secondCallDone.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            callCount.ShouldBe(2);
+        }
+
+        [Fact]
+        public async Task Execute_WhenNextThrows_LogsError()
+        {
+            var timeProvider = new FakeTimeProvider();
+            var logger = new FakeLogger<DelayTrigger>();
+            var logged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var cts = new CancellationTokenSource();
+            var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger);
+
+            var executeTask = trigger.Execute((_, _) =>
+            {
+                logged.TrySetResult();
+                throw new InvalidOperationException("boom");
+            }, cts.Token);
+
+            await logged.Task.WaitAsync(TestContext.Current.CancellationToken);
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
+        }
+
+        [Fact]
+        public async Task Execute_WhenNextThrowsOperationCancelledAndTokenCancelled_Propagates()
+        {
+            var timeProvider = new FakeTimeProvider();
+            using var cts = new CancellationTokenSource();
+
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+
+            var executeTask = trigger.Execute((_, ct) =>
+            {
+                cts.Cancel();
+                ct.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            }, cts.Token);
+
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+        }
+
+        private static DelayTrigger Create(
+            FakeTimeProvider timeProvider,
+            TimeSpan delay) =>
+            new(delay, timeProvider, new FakeLogger<DelayTrigger>());
     }
 }
