@@ -7,7 +7,7 @@ using Shouldly;
 namespace WorkR.Triggers.Timers.Tests
 {
     [Trait("Category", "L0")]
-    public class TimerTriggerTests
+    public class ScheduledTriggerTests
     {
         private static readonly DateTimeOffset StartTime = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
         private const string EveryMinuteSchedule = "* * * * *";
@@ -16,7 +16,7 @@ namespace WorkR.Triggers.Timers.Tests
         public void Constructor_WhenScheduleIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new TimerTrigger(null!, TimeProvider.System, new FakeLogger<TimerTrigger>()));
+                new ScheduledTrigger(null!, TimeProvider.System, new FakeLogger<ScheduledTrigger>()));
         }
 
         [Fact]
@@ -24,7 +24,7 @@ namespace WorkR.Triggers.Timers.Tests
         {
             var schedule = CrontabSchedule.Parse(EveryMinuteSchedule);
             Should.Throw<ArgumentNullException>(() =>
-                new TimerTrigger(schedule, null!, new FakeLogger<TimerTrigger>()));
+                new ScheduledTrigger(schedule, null!, new FakeLogger<ScheduledTrigger>()));
         }
 
         [Fact]
@@ -32,7 +32,7 @@ namespace WorkR.Triggers.Timers.Tests
         {
             var schedule = CrontabSchedule.Parse(EveryMinuteSchedule);
             Should.Throw<ArgumentNullException>(() =>
-                new TimerTrigger(schedule, TimeProvider.System, null!));
+                new ScheduledTrigger(schedule, TimeProvider.System, null!));
         }
 
         [Fact]
@@ -163,10 +163,10 @@ namespace WorkR.Triggers.Timers.Tests
         public async Task Execute_LogsInitialisationMessage()
         {
             var timeProvider = new FakeTimeProvider(StartTime);
-            var logger = new FakeLogger<TimerTrigger>();
+            var logger = new FakeLogger<ScheduledTrigger>();
             using var cts = new CancellationTokenSource();
             var schedule = CrontabSchedule.Parse(EveryMinuteSchedule);
-            var trigger = new TimerTrigger(schedule, timeProvider, logger);
+            var trigger = new ScheduledTrigger(schedule, timeProvider, logger);
 
             var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
@@ -199,9 +199,9 @@ namespace WorkR.Triggers.Timers.Tests
         public async Task Execute_LogsStoppedOnCancellation()
         {
             var timeProvider = new FakeTimeProvider(StartTime);
-            var logger = new FakeLogger<TimerTrigger>();
+            var logger = new FakeLogger<ScheduledTrigger>();
             using var cts = new CancellationTokenSource();
-            var trigger = new TimerTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger);
+            var trigger = new ScheduledTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger);
 
             var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
@@ -239,9 +239,9 @@ namespace WorkR.Triggers.Timers.Tests
         public async Task Execute_WhenNextThrows_LogsError()
         {
             var timeProvider = new FakeTimeProvider(StartTime);
-            var logger = new FakeLogger<TimerTrigger>();
+            var logger = new FakeLogger<ScheduledTrigger>();
             using var cts = new CancellationTokenSource();
-            var trigger = new TimerTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger, runOnStartup: true);
+            var trigger = new ScheduledTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger, runOnStartup: true);
 
             var executeTask = trigger.Execute((_, _) =>
             {
@@ -272,13 +272,13 @@ namespace WorkR.Triggers.Timers.Tests
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
         }
 
-        private static TimerTrigger Create(
+        private static ScheduledTrigger Create(
             FakeTimeProvider timeProvider,
             string schedule,
             bool runOnStartup = false) =>
             new(CrontabSchedule.Parse(schedule),
                 timeProvider,
-                new FakeLogger<TimerTrigger>(),
+                new FakeLogger<ScheduledTrigger>(),
                 runOnStartup);
     }
 }

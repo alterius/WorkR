@@ -40,7 +40,7 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddScheduledWorker(
             this IServiceCollection services,
             string schedule,
-            WorkerPipelineBuilderDelegate<TimerTrigger, EmptyTriggerContext> builder,
+            WorkerPipelineBuilderDelegate<ScheduledTrigger, EmptyTriggerContext> builder,
             bool runOnStartup = false,
             bool includeSeconds = false)
         {
@@ -54,10 +54,10 @@ namespace WorkR.Triggers.Timers
                 });
 
             return services.AddWorker(
-                sp => new TimerTrigger(
+                sp => new ScheduledTrigger(
                     cronTabSchedule,
                     sp.GetRequiredService<TimeProvider>(),
-                    sp.GetRequiredService<ILogger<TimerTrigger>>(),
+                    sp.GetRequiredService<ILogger<ScheduledTrigger>>(),
                     runOnStartup),
                 builder,
                 static mw => mw

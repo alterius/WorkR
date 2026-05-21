@@ -3,17 +3,17 @@ using NCrontab;
 
 namespace WorkR.Triggers.Timers
 {
-    public sealed class TimerTrigger : ITrigger<EmptyTriggerContext>
+    public sealed class ScheduledTrigger : ITrigger<EmptyTriggerContext>
     {
         private readonly CrontabSchedule _schedule;
         private readonly TimeProvider _timeProvider;
         private readonly ILogger _logger;
         private readonly bool _runOnStartup;
 
-        public TimerTrigger(
+        public ScheduledTrigger(
             CrontabSchedule schedule,
             TimeProvider timeProvider,
-            ILogger<TimerTrigger> logger,
+            ILogger<ScheduledTrigger> logger,
             bool runOnStartup = false)
         {
             ArgumentNullException.ThrowIfNull(schedule);
@@ -28,7 +28,7 @@ namespace WorkR.Triggers.Timers
 
         public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Timer trigger initialised with schedule {schedule} and runOnStartup {runOnStartup}", _schedule.ToString(), _runOnStartup);
+            _logger.LogInformation("Scheduled trigger initialised with schedule {schedule} and runOnStartup {runOnStartup}", _schedule.ToString(), _runOnStartup);
 
             async Task Next(DateTimeOffset timestamp)
             {
@@ -40,12 +40,12 @@ namespace WorkR.Triggers.Timers
                         context.ExecutionId
                     });
 
-                _logger.LogDebug("Timer trigger executing...");
+                _logger.LogDebug("Scheduled trigger executing...");
 
                 try
                 {
                     await next(context, stoppingToken).ConfigureAwait(false);
-                    _logger.LogDebug("Timer trigger executed");
+                    _logger.LogDebug("Scheduled trigger executed");
                 }
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)
@@ -71,7 +71,7 @@ namespace WorkR.Triggers.Timers
                     var nextOccurrenceUtc = _schedule.GetNextOccurrence(nowUtc);
                     var delay = TimeSpan.FromTicks(Math.Max((nextOccurrenceUtc - nowUtc).Ticks, 0));
 
-                    _logger.LogDebug("Timer trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
+                    _logger.LogDebug("Scheduled trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
 
                     await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                     await Next(nextOccurrenceUtc).ConfigureAwait(false);
@@ -79,7 +79,7 @@ namespace WorkR.Triggers.Timers
             }
             finally
             {
-                _logger.LogInformation("Timer trigger stopped");
+                _logger.LogInformation("Scheduled trigger stopped");
             }
         }
     }
