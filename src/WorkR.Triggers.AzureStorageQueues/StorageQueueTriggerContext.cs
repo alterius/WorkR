@@ -27,8 +27,8 @@ namespace WorkR.Triggers.AzureStorageQueues
 
         public QueueMessage Message { get; }
 
-        public Task DeleteMessageAsync(CancellationToken ct) => _deleteMessage(ct);
-        public Task DeadLetterMessageAsync(CancellationToken ct) => _deadLetterMessage(ct);
+        public Task DeleteMessageAsync(CancellationToken cancellationToken) => _deleteMessage(cancellationToken);
+        public Task DeadLetterMessageAsync(CancellationToken cancellationToken) => _deadLetterMessage(cancellationToken);
     }
 
     public sealed class StorageQueueTriggerContext : ValueTriggerContext<QueueMessage>
@@ -51,7 +51,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             _deadLetterMessage = deadLetterMessage;
         }
 
-        public Task DeleteMessageAsync(CancellationToken ct) => _deleteMessage(ct);
-        public Task DeadLetterMessageAsync(CancellationToken ct) => _deadLetterMessage(ct);
+        public Task DeleteMessageAsync(CancellationToken cancellationToken) => _deleteMessage(cancellationToken);
+        public Task DeadLetterMessageAsync(CancellationToken cancellationToken) => _deadLetterMessage(cancellationToken);
     }
 }

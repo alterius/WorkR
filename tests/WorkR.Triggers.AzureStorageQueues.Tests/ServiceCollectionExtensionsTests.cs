@@ -136,12 +136,12 @@ public class ServiceCollectionExtensionsTests
 
     private sealed class FakeWorker : IWorker<StorageQueueTriggerContext>
     {
-        public Task Execute(StorageQueueTriggerContext context, CancellationToken ct) => Task.CompletedTask;
+        public Task ExecuteAsync(StorageQueueTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakeTypedWorker : IWorker<StorageQueueTriggerContext<string>>
     {
-        public Task Execute(StorageQueueTriggerContext<string> context, CancellationToken ct) => Task.CompletedTask;
+        public Task ExecuteAsync(StorageQueueTriggerContext<string> context, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class CustomTimeProvider : TimeProvider;

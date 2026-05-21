@@ -12,7 +12,7 @@ namespace WorkR.Samples.AzureStorageQueue
             _queueClient = queueClient;
         }
 
-        public async Task Execute(EmptyTriggerContext source, CancellationToken ct)
+        public async Task ExecuteAsync(EmptyTriggerContext source, CancellationToken cancellationToken)
         {
             var message = new TestMessage
             {
@@ -23,7 +23,7 @@ namespace WorkR.Samples.AzureStorageQueue
 
             await _queueClient.SendMessageAsync(
                 JsonSerializer.Serialize(message),
-                ct);
+                cancellationToken);
         }
     }
 }

@@ -88,7 +88,7 @@ public class StorageQueueTriggerTests
         var trigger = MakeTrigger(serviceClient);
         var invoked = false;
 
-        var executeTask = trigger.Execute((ctx, ct) => { invoked = true; return Task.CompletedTask; }, cts.Token);
+        var executeTask = trigger.ExecuteAsync((ctx, ct) => { invoked = true; return Task.CompletedTask; }, cts.Token);
 
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
@@ -110,7 +110,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient);
 
-        var executeTask = trigger.Execute((ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync((ctx, ct) =>
         {
             invocations.Add(ctx.Value.MessageId);
             if (invocations.Count == 2) bothInvoked.TrySetResult();
@@ -142,7 +142,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         pollCount.ShouldBe(1);
         timeProvider.Advance(TimeSpan.FromSeconds(9));
@@ -175,7 +175,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         timeProvider.Advance(DefaultOptions.ErrorDelay(0));
         await recoveredPollStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -201,7 +201,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         timeProvider.Advance(DefaultOptions.ErrorDelay(0));
         await recoveredPollStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -231,7 +231,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         timeProvider.Advance(TimeSpan.FromSeconds(1));
         await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -270,7 +270,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         timeProvider.Advance(TimeSpan.FromSeconds(1));
         timeProvider.Advance(TimeSpan.FromSeconds(1));
@@ -303,7 +303,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         timeProvider.Advance(TimeSpan.FromSeconds(1));
         await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -340,7 +340,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, options, timeProvider, new FakeLogger<StorageQueueTrigger>());
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         timeProvider.Advance(TimeSpan.FromSeconds(1));
         await secondDelayStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -361,7 +361,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient);
 
-        var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
         await cts.CancelAsync();
 
@@ -385,7 +385,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient);
 
-        var executeTask = trigger.Execute((ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync((ctx, ct) =>
         {
             capturedOccurredAt = ctx.OccurredAt;
             workerInvoked.TrySetResult();
@@ -412,7 +412,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient);
 
-        var executeTask = trigger.Execute((ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync((ctx, ct) =>
         {
             capturedId = ctx.Value.MessageId;
             workerInvoked.TrySetResult();
@@ -440,7 +440,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { AutoCompleteMessages = false });
 
-        var executeTask = trigger.Execute(async (ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync(async (ctx, ct) =>
         {
             await ctx.DeleteMessageAsync(ct);
             workerInvoked.TrySetResult();
@@ -471,7 +471,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient);
 
-        var executeTask = trigger.Execute((_, _) =>
+        var executeTask = trigger.ExecuteAsync((_, _) =>
         {
             callCount++;
             if (callCount >= 2) secondCallDone.TrySetResult();
@@ -498,7 +498,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), logger);
 
-        var executeTask = trigger.Execute((_, _) =>
+        var executeTask = trigger.ExecuteAsync((_, _) =>
         {
             logged.TrySetResult();
             throw new InvalidOperationException("boom");
@@ -522,7 +522,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient);
 
-        var executeTask = trigger.Execute((_, ct) =>
+        var executeTask = trigger.ExecuteAsync((_, ct) =>
         {
             cts.Cancel();
             ct.ThrowIfCancellationRequested();
@@ -550,7 +550,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { AutoCompleteMessages = true });
 
-        var executeTask = trigger.Execute((_, _) =>
+        var executeTask = trigger.ExecuteAsync((_, _) =>
         {
             workerInvoked.TrySetResult();
             return Task.CompletedTask;
@@ -575,7 +575,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { AutoCompleteMessages = false });
 
-        var executeTask = trigger.Execute((_, _) =>
+        var executeTask = trigger.ExecuteAsync((_, _) =>
         {
             workerInvoked.TrySetResult();
             return Task.CompletedTask;
@@ -613,7 +613,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient, options);
 
-        var executeTask = trigger.Execute((_, _) => throw new InvalidOperationException("fail"), cts.Token);
+        var executeTask = trigger.ExecuteAsync((_, _) => throw new InvalidOperationException("fail"), cts.Token);
 
         await deadLetterSent.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
@@ -642,7 +642,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient, options);
 
-        var executeTask = trigger.Execute((ctx, _) =>
+        var executeTask = trigger.ExecuteAsync((ctx, _) =>
         {
             if (ctx.Value.MessageId == "m2") goodMessageProcessed.TrySetResult();
             if (ctx.Value.MessageId == "m1") throw new InvalidOperationException("fail");
@@ -675,7 +675,7 @@ public class StorageQueueTriggerTests
         using var cts = new CancellationTokenSource();
         var trigger = MakeTrigger(serviceClient, options);
 
-        var executeTask = trigger.Execute((ctx, _) =>
+        var executeTask = trigger.ExecuteAsync((ctx, _) =>
         {
             if (ctx.Value.MessageId == "m2") goodMessageProcessed.TrySetResult();
             if (ctx.Value.MessageId == "m1") throw new InvalidOperationException("fail");
@@ -775,7 +775,7 @@ public class StorageQueueTriggerTypedTests
             serviceClient, QueueName, DefaultOptions, StorageQueueMessageDeserializers.Json<TestPayload>(),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<TestPayload>>());
 
-        var executeTask = trigger.Execute((ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync((ctx, ct) =>
         {
             captured = ctx.Value;
             workerInvoked.TrySetResult();
@@ -805,7 +805,7 @@ public class StorageQueueTriggerTypedTests
             serviceClient, QueueName, DefaultOptions, StorageQueueMessageDeserializers.Json<TestPayload>(),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<TestPayload>>());
 
-        var executeTask = trigger.Execute((ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync((ctx, ct) =>
         {
             capturedId = ctx.Message.MessageId;
             workerInvoked.TrySetResult();
@@ -839,7 +839,7 @@ public class StorageQueueTriggerTypedTests
             serviceClient, QueueName, options, StorageQueueMessageDeserializers.Json<TestPayload>(),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<TestPayload>>());
 
-        var executeTask = trigger.Execute((ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync((ctx, ct) =>
         {
             deliveredIds.Add(ctx.Message.MessageId);
             workerInvoked.TrySetResult();
@@ -869,7 +869,7 @@ public class StorageQueueTriggerTypedTests
             msg => Task.FromResult(msg.Body.ToString().ToUpper()),
             new FakeTimeProvider(StartTime), new FakeLogger<StorageQueueTrigger<string>>());
 
-        var executeTask = trigger.Execute((ctx, ct) =>
+        var executeTask = trigger.ExecuteAsync((ctx, ct) =>
         {
             captured = ctx.Value;
             workerInvoked.TrySetResult();

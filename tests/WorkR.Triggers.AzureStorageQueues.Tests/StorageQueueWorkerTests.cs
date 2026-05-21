@@ -135,7 +135,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
 
     private sealed class CapturingWorker(TaskCompletionSource<string> received) : IWorker<StorageQueueTriggerContext<Payload>>
     {
-        public Task Execute(StorageQueueTriggerContext<Payload> context, CancellationToken ct)
+        public Task ExecuteAsync(StorageQueueTriggerContext<Payload> context, CancellationToken cancellationToken)
         {
             received.TrySetResult(context.Value.Name);
             return Task.CompletedTask;
@@ -144,16 +144,16 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
 
     private sealed class DeletingWorker(TaskCompletionSource deleted) : IWorker<StorageQueueTriggerContext<Payload>>
     {
-        public async Task Execute(StorageQueueTriggerContext<Payload> context, CancellationToken ct)
+        public async Task ExecuteAsync(StorageQueueTriggerContext<Payload> context, CancellationToken cancellationToken)
         {
-            await context.DeleteMessageAsync(ct);
+            await context.DeleteMessageAsync(cancellationToken);
             deleted.TrySetResult();
         }
     }
 
     private sealed class StringCapturingWorker(TaskCompletionSource<string> received) : IWorker<StorageQueueTriggerContext<string>>
     {
-        public Task Execute(StorageQueueTriggerContext<string> context, CancellationToken ct)
+        public Task ExecuteAsync(StorageQueueTriggerContext<string> context, CancellationToken cancellationToken)
         {
             received.TrySetResult(context.Value);
             return Task.CompletedTask;
@@ -185,7 +185,7 @@ public class StorageQueueWorkerTests : IClassFixture<AzuriteFixture>
 
     private sealed class ScopeCapturingWorker(ScopedId scopedId, ScopeLog log) : IWorker<StorageQueueTriggerContext<Payload>>
     {
-        public Task Execute(StorageQueueTriggerContext<Payload> context, CancellationToken ct)
+        public Task ExecuteAsync(StorageQueueTriggerContext<Payload> context, CancellationToken cancellationToken)
         {
             log.Add(scopedId.Value);
             return Task.CompletedTask;
