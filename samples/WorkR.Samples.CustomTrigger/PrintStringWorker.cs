@@ -11,7 +11,7 @@ namespace WorkR.Samples.CustomTrigger
             _logger = logger;
         }
 
-        public Task Execute(string source, CancellationToken ct)
+        public Task ExecuteAsync(string source, CancellationToken cancellationToken)
         {
             _logger.LogInformation("I'm printing a string: {string}", source);
             return Task.CompletedTask;

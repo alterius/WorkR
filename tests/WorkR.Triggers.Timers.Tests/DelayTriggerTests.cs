@@ -37,20 +37,20 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WhenRunOnStartupIsTrue_CallsNextBeforeFirstDelay()
+        public async Task ExecuteAsync_WhenRunOnStartupIsTrue_CallsWorkerPipelineBeforeFirstDelay()
         {
             var timeProvider = new FakeTimeProvider();
             var called = false;
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
-            var executeTask = trigger.Execute((ctx, ct) =>
+            var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
                 called = true;
                 return Task.CompletedTask;
             }, cts.Token);
 
-            // next is called synchronously during Execute() before the first Task.Delay suspension
+            // workerPipeline is called synchronously during ExecuteAsync() before the first Task.Delay suspension
             called.ShouldBeTrue();
 
             await cts.CancelAsync();
@@ -58,14 +58,14 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WhenRunOnStartupIsFalse_DoesNotCallNextBeforeFirstDelay()
+        public async Task ExecuteAsync_WhenRunOnStartupIsFalse_DoesNotCallWorkerPipelineBeforeFirstDelay()
         {
             var timeProvider = new FakeTimeProvider();
             var called = false;
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: false);
 
-            var executeTask = trigger.Execute((ctx, ct) =>
+            var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
                 called = true;
                 return Task.CompletedTask;
@@ -79,14 +79,14 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WhenRunOnStartupIsFalse_CallsNextAfterFirstDelay()
+        public async Task ExecuteAsync_WhenRunOnStartupIsFalse_CallsWorkerPipelineAfterFirstDelay()
         {
             var timeProvider = new FakeTimeProvider();
             var called = false;
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: false);
 
-            var executeTask = trigger.Execute((ctx, ct) =>
+            var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
                 called = true;
                 cts.Cancel();
@@ -102,7 +102,7 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_PassesCurrentTimestampToNext()
+        public async Task ExecuteAsync_PassesCurrentTimestampToWorkerPipeline()
         {
             var startTime = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
             var timeProvider = new FakeTimeProvider(startTime);
@@ -110,7 +110,7 @@ namespace WorkR.Triggers.Timers.Tests
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
-            var executeTask = trigger.Execute((ctx, ct) =>
+            var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
                 capturedOccurredAt = ctx.OccurredAt;
                 return Task.CompletedTask;
@@ -123,7 +123,7 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WaitsDelayBetweenInvocations()
+        public async Task ExecuteAsync_WaitsDelayBetweenInvocations()
         {
             var timeProvider = new FakeTimeProvider();
             var callCount = 0;
@@ -131,7 +131,7 @@ namespace WorkR.Triggers.Timers.Tests
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
-            var executeTask = trigger.Execute((ctx, ct) =>
+            var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
                 callCount++;
                 if (callCount == 2)
@@ -150,13 +150,13 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_StopsWhenCancelled()
+        public async Task ExecuteAsync_StopsWhenCancelled()
         {
             var timeProvider = new FakeTimeProvider();
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
-            var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+            var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
             await cts.CancelAsync();
 
@@ -164,14 +164,14 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_LogsInitialisationMessage()
+        public async Task ExecuteAsync_LogsInitialisationMessage()
         {
             var timeProvider = new FakeTimeProvider();
             var logger = new FakeLogger<DelayTrigger>();
             using var cts = new CancellationTokenSource();
             var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger);
 
-            var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+            var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
             // Init log is written synchronously before the first Task.Delay suspension
             logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Information);
@@ -181,7 +181,7 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WhenTokenAlreadyCancelled_DoesNotCallNext()
+        public async Task ExecuteAsync_WhenTokenAlreadyCancelled_DoesNotCallWorkerPipeline()
         {
             var timeProvider = new FakeTimeProvider();
             var called = false;
@@ -189,7 +189,7 @@ namespace WorkR.Triggers.Timers.Tests
             await cts.CancelAsync();
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
-            await trigger.Execute((_, _) =>
+            await trigger.ExecuteAsync((_, _) =>
             {
                 called = true;
                 return Task.CompletedTask;
@@ -199,14 +199,14 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_LogsStoppedOnCancellation()
+        public async Task ExecuteAsync_LogsStoppedOnCancellation()
         {
             var timeProvider = new FakeTimeProvider();
             var logger = new FakeLogger<DelayTrigger>();
             using var cts = new CancellationTokenSource();
             var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger);
 
-            var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
+            var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
 
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
@@ -215,7 +215,7 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrows_DoesNotStopLoop()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrows_DoesNotStopLoop()
         {
             var timeProvider = new FakeTimeProvider();
             var callCount = 0;
@@ -224,7 +224,7 @@ namespace WorkR.Triggers.Timers.Tests
 
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
-            var executeTask = trigger.Execute((_, _) =>
+            var executeTask = trigger.ExecuteAsync((_, _) =>
             {
                 callCount++;
                 if (callCount >= 2)
@@ -243,7 +243,7 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrows_LogsError()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrows_LogsError()
         {
             var timeProvider = new FakeTimeProvider();
             var logger = new FakeLogger<DelayTrigger>();
@@ -251,7 +251,7 @@ namespace WorkR.Triggers.Timers.Tests
             using var cts = new CancellationTokenSource();
             var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger, runOnStartup: true);
 
-            var executeTask = trigger.Execute((_, _) =>
+            var executeTask = trigger.ExecuteAsync((_, _) =>
             {
                 logged.TrySetResult();
                 throw new InvalidOperationException("boom");
@@ -265,14 +265,14 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrowsOperationCancelledAndTokenCancelled_Propagates()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrowsOperationCancelledAndTokenCancelled_Propagates()
         {
             var timeProvider = new FakeTimeProvider();
             using var cts = new CancellationTokenSource();
 
             var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
-            var executeTask = trigger.Execute((_, ct) =>
+            var executeTask = trigger.ExecuteAsync((_, ct) =>
             {
                 cts.Cancel();
                 ct.ThrowIfCancellationRequested();

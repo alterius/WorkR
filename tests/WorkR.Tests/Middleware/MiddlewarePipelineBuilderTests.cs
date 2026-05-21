@@ -106,7 +106,7 @@ namespace WorkR.Tests.Middleware
 
         private sealed class NoopMiddleware : IWorkerMiddleware
         {
-            public Task Execute(Func<CancellationToken, Task> next, CancellationToken ct) => next(ct);
+            public Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken) => next(cancellationToken);
         }
 
         private sealed class RecordingMiddleware : IWorkerMiddleware
@@ -120,16 +120,16 @@ namespace WorkR.Tests.Middleware
                 _order = order;
             }
 
-            public async Task Execute(Func<CancellationToken, Task> next, CancellationToken ct)
+            public async Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
             {
                 _order.Add(_name);
-                await next(ct);
+                await next(cancellationToken);
             }
         }
 
         private sealed class ShortCircuitMiddleware : IWorkerMiddleware
         {
-            public Task Execute(Func<CancellationToken, Task> next, CancellationToken ct) =>
+            public Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken) =>
                 Task.CompletedTask;
         }
     }

@@ -25,12 +25,12 @@ namespace WorkR.Tests.Triggers.RunOnce
         }
 
         [Fact]
-        public async Task Execute_CallsNextExactlyOnce()
+        public async Task ExecuteAsync_CallsWorkerPipelineExactlyOnce()
         {
             var callCount = 0;
             var trigger = Create();
 
-            await trigger.Execute((ctx, ct) =>
+            await trigger.ExecuteAsync((ctx, ct) =>
             {
                 callCount++;
                 return Task.CompletedTask;
@@ -40,14 +40,14 @@ namespace WorkR.Tests.Triggers.RunOnce
         }
 
         [Fact]
-        public async Task Execute_PassesCurrentTimestampToNext()
+        public async Task ExecuteAsync_PassesCurrentTimestampToWorkerPipeline()
         {
             var startTime = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
             var timeProvider = new FakeTimeProvider(startTime);
             DateTimeOffset? capturedOccurredAt = null;
             var trigger = new RunOnceTrigger(timeProvider, new FakeLogger<RunOnceTrigger>());
 
-            await trigger.Execute((ctx, ct) =>
+            await trigger.ExecuteAsync((ctx, ct) =>
             {
                 capturedOccurredAt = ctx.OccurredAt;
                 return Task.CompletedTask;
@@ -57,12 +57,12 @@ namespace WorkR.Tests.Triggers.RunOnce
         }
 
         [Fact]
-        public async Task Execute_LogsBeforeCallingNext()
+        public async Task ExecuteAsync_LogsBeforeCallingWorkerPipeline()
         {
             var logger = new FakeLogger<RunOnceTrigger>();
             var trigger = new RunOnceTrigger(TimeProvider.System, logger);
 
-            await trigger.Execute((_, _) => Task.CompletedTask, TestContext.Current.CancellationToken);
+            await trigger.ExecuteAsync((_, _) => Task.CompletedTask, TestContext.Current.CancellationToken);
 
             var snapshot = logger.Collector.GetSnapshot();
             snapshot[0].Level.ShouldBe(LogLevel.Information);
@@ -70,45 +70,45 @@ namespace WorkR.Tests.Triggers.RunOnce
         }
 
         [Fact]
-        public async Task Execute_LogsStoppedAfterNextCompletes()
+        public async Task ExecuteAsync_LogsStoppedAfterWorkerPipelineCompletes()
         {
             var logger = new FakeLogger<RunOnceTrigger>();
             var trigger = new RunOnceTrigger(TimeProvider.System, logger);
 
-            await trigger.Execute((_, _) => Task.CompletedTask, TestContext.Current.CancellationToken);
+            await trigger.ExecuteAsync((_, _) => Task.CompletedTask, TestContext.Current.CancellationToken);
 
             var snapshot = logger.Collector.GetSnapshot();
             snapshot.Last().Message.ShouldContain("stopped");
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrows_DoesNotRethrow()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrows_DoesNotRethrow()
         {
             var trigger = Create();
 
             await Should.NotThrowAsync(() =>
-                trigger.Execute((_, _) => throw new InvalidOperationException(), TestContext.Current.CancellationToken));
+                trigger.ExecuteAsync((_, _) => throw new InvalidOperationException(), TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrows_LogsError()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrows_LogsError()
         {
             var logger = new FakeLogger<RunOnceTrigger>();
             var trigger = new RunOnceTrigger(TimeProvider.System, logger);
 
-            await trigger.Execute((_, _) => throw new InvalidOperationException("boom"), TestContext.Current.CancellationToken);
+            await trigger.ExecuteAsync((_, _) => throw new InvalidOperationException("boom"), TestContext.Current.CancellationToken);
 
             logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrowsOperationCancelledAndTokenCancelled_Propagates()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrowsOperationCancelledAndTokenCancelled_Propagates()
         {
             using var cts = new CancellationTokenSource();
             var trigger = Create();
 
             await Should.ThrowAsync<OperationCanceledException>(() =>
-                trigger.Execute((_, ct) =>
+                trigger.ExecuteAsync((_, ct) =>
                 {
                     cts.Cancel();
                     ct.ThrowIfCancellationRequested();

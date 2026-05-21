@@ -13,17 +13,17 @@ namespace WorkR.Middleware
             _logger = logger;
         }
 
-        public Task Execute(Func<CancellationToken, Task> next, CancellationToken ct)
+        public Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
         {
             _ = Task.Run(
                 async () =>
                 {
                     try
                     {
-                        await next(ct).ConfigureAwait(false);
+                        await next(cancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
-                        when (ct.IsCancellationRequested)
+                        when (cancellationToken.IsCancellationRequested)
                     {
                         // Expected shutdown
                     }
@@ -32,7 +32,7 @@ namespace WorkR.Middleware
                         _logger.LogError(ex, "Worker execution failed with unhandled exception");
                     }
                 },
-                ct);
+                cancellationToken);
             return Task.CompletedTask;
         }
     }

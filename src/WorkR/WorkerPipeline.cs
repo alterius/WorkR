@@ -3,8 +3,8 @@ using WorkR.Middleware;
 
 namespace WorkR
 {
-    internal delegate Task WorkerPipelineDelegate<TOut>(IServiceProvider sp, TOut value, CancellationToken ct);
-    internal delegate Task WorkerPipelineDelegate<TIn, TOut>(IServiceProvider sp, TIn value, WorkerPipelineDelegate<TOut> next, CancellationToken ct);
+    internal delegate Task WorkerPipelineDelegate<TOut>(IServiceProvider sp, TOut value, CancellationToken cancellationToken);
+    internal delegate Task WorkerPipelineDelegate<TIn, TOut>(IServiceProvider sp, TIn value, WorkerPipelineDelegate<TOut> next, CancellationToken cancellationToken);
 
     internal static class WorkerPipeline
     {
@@ -34,7 +34,7 @@ namespace WorkR
                     applyMiddleware((sp3, ct3) =>
                     {
                         var worker = sp3.GetRequiredService<TWorker>();
-                        return worker.Execute(value2, (v, ct4) => next(sp3, v, ct4), ct3);
+                        return worker.ExecuteAsync(value2, (v, ct4) => next(sp3, v, ct4), ct3);
                     })(sp2, ct2), ct));
         }
 
@@ -50,7 +50,7 @@ namespace WorkR
                     applyMiddleware((sp3, ct3) =>
                     {
                         var worker = sp3.GetRequiredService<TWorker>();
-                        return worker.Execute(value2, ct3);
+                        return worker.ExecuteAsync(value2, ct3);
                     })(sp2, ct2), ct));
         }
 

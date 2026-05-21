@@ -15,69 +15,69 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_WhenNoExceptionThrown_CallsNext()
+        public async Task ExecuteAsync_WhenNoExceptionThrown_CallsNext()
         {
             var called = false;
             var middleware = Create<Exception>();
 
-            await middleware.Execute(ct => { called = true; return Task.CompletedTask; }, TestContext.Current.CancellationToken);
+            await middleware.ExecuteAsync(ct => { called = true; return Task.CompletedTask; }, TestContext.Current.CancellationToken);
 
             called.ShouldBeTrue();
         }
 
         [Fact]
-        public async Task Execute_WhenMatchingExceptionTypeThrown_SwallowsException()
+        public async Task ExecuteAsync_WhenMatchingExceptionTypeThrown_SwallowsException()
         {
             var middleware = Create<InvalidOperationException>();
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
+                middleware.ExecuteAsync(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenNonMatchingExceptionTypeThrown_PropagatesException()
+        public async Task ExecuteAsync_WhenNonMatchingExceptionTypeThrown_PropagatesException()
         {
             var middleware = Create<ArgumentException>();
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
+                middleware.ExecuteAsync(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenDerivedExceptionTypeThrown_SwallowsException()
+        public async Task ExecuteAsync_WhenDerivedExceptionTypeThrown_SwallowsException()
         {
             var middleware = Create<Exception>();
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
+                middleware.ExecuteAsync(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenPredicateReturnsFalse_PropagatesException()
+        public async Task ExecuteAsync_WhenPredicateReturnsFalse_PropagatesException()
         {
             var middleware = Create<InvalidOperationException>(predicate: _ => false);
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
+                middleware.ExecuteAsync(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenPredicateReturnsTrue_SwallowsException()
+        public async Task ExecuteAsync_WhenPredicateReturnsTrue_SwallowsException()
         {
             var middleware = Create<InvalidOperationException>(predicate: _ => true);
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
+                middleware.ExecuteAsync(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenMatchingExceptionTypeThrown_LogsError()
+        public async Task ExecuteAsync_WhenMatchingExceptionTypeThrown_LogsError()
         {
             var logger = new FakeLogger<ErrorHandlingMiddleware<InvalidOperationException>>();
             var exception = new InvalidOperationException("test error");
             var middleware = new ErrorHandlingMiddleware<InvalidOperationException>(logger);
 
-            await middleware.Execute(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
+            await middleware.ExecuteAsync(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
 
             var log = logger.Collector.GetSnapshot().ShouldHaveSingleItem();
             log.Level.ShouldBe(LogLevel.Error);

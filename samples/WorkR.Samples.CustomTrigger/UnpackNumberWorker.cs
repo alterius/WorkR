@@ -2,9 +2,9 @@ namespace WorkR.Samples.CustomTrigger
 {
     public class UnpackNumberWorker : IWorker<ValueTriggerContext<int>, int>
     {
-        public Task Execute(ValueTriggerContext<int> source, WorkerDelegate<int> next, CancellationToken ct)
+        public Task ExecuteAsync(ValueTriggerContext<int> source, WorkerDelegate<int> next, CancellationToken cancellationToken)
         {
-            return next(source.Value, ct);
+            return next(source.Value, cancellationToken);
         }
     }
 }

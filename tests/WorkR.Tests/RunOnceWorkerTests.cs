@@ -92,7 +92,7 @@ namespace WorkR.Tests
 
         private sealed class SignalWorker(WorkerSignal signal) : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct)
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken)
             {
                 signal.Signal();
                 return Task.CompletedTask;
@@ -101,7 +101,7 @@ namespace WorkR.Tests
 
         private sealed class ThrowingWorker(TaskCompletionSource signal) : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct)
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken)
             {
                 signal.TrySetResult();
                 throw new InvalidOperationException("test error");
@@ -118,7 +118,7 @@ namespace WorkR.Tests
             ExplicitDependency dependency,
             TaskCompletionSource signal) : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct)
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken)
             {
                 dependency.Capture();
                 signal.TrySetResult();

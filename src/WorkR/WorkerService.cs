@@ -47,7 +47,7 @@ namespace WorkR
 
             try
             {
-                await _trigger.Execute(pipeline, stoppingToken).ConfigureAwait(false);
+                await _trigger.ExecuteAsync(pipeline, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
                 when (stoppingToken.IsCancellationRequested)

@@ -8,13 +8,13 @@ namespace WorkR.Tests.Middleware
     public class ScopeMiddlewareTests
     {
         [Fact]
-        public async Task Execute_PassesScopedServiceProviderToNext()
+        public async Task ExecuteAsync_PassesScopedServiceProviderToNext()
         {
             await using var rootSp = new ServiceCollection().BuildServiceProvider();
             IServiceProvider? capturedSp = null;
             var middleware = new ScopeMiddleware();
 
-            await middleware.Execute(rootSp, (sp, ct) =>
+            await middleware.ExecuteAsync(rootSp, (sp, ct) =>
             {
                 capturedSp = sp;
                 return Task.CompletedTask;
@@ -25,7 +25,7 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_DisposesScopeAfterNextCompletes()
+        public async Task ExecuteAsync_DisposesScopeAfterNextCompletes()
         {
             var services = new ServiceCollection();
             services.AddScoped<DisposableService>();
@@ -33,7 +33,7 @@ namespace WorkR.Tests.Middleware
             DisposableService? resolved = null;
             var middleware = new ScopeMiddleware();
 
-            await middleware.Execute(rootSp, (sp, ct) =>
+            await middleware.ExecuteAsync(rootSp, (sp, ct) =>
             {
                 resolved = sp.GetRequiredService<DisposableService>();
                 return Task.CompletedTask;
@@ -44,7 +44,7 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_DisposesScopeWhenNextThrows()
+        public async Task ExecuteAsync_DisposesScopeWhenNextThrows()
         {
             var services = new ServiceCollection();
             services.AddScoped<DisposableService>();
@@ -53,7 +53,7 @@ namespace WorkR.Tests.Middleware
             var middleware = new ScopeMiddleware();
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
-                middleware.Execute(rootSp, (sp, ct) =>
+                middleware.ExecuteAsync(rootSp, (sp, ct) =>
                 {
                     resolved = sp.GetRequiredService<DisposableService>();
                     return Task.FromException(new InvalidOperationException());

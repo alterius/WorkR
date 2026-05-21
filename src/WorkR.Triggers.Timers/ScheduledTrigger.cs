@@ -26,7 +26,7 @@ namespace WorkR.Triggers.Timers
             _runOnStartup = runOnStartup;
         }
 
-        public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Scheduled trigger initialised with schedule {schedule} and runOnStartup {runOnStartup}", _schedule.ToString(), _runOnStartup);
 
@@ -44,7 +44,7 @@ namespace WorkR.Triggers.Timers
 
                 try
                 {
-                    await next(context, stoppingToken).ConfigureAwait(false);
+                    await workerPipeline(context, stoppingToken).ConfigureAwait(false);
                     _logger.LogDebug("Scheduled trigger executed");
                 }
                 catch (OperationCanceledException)

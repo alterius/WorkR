@@ -16,34 +16,34 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public void Execute_ReturnsImmediatelyWithoutAwaitingNext()
+        public void ExecuteAsync_ReturnsImmediatelyWithoutAwaitingNext()
         {
             var middleware = new FireAndForgetMiddleware(NullLogger<FireAndForgetMiddleware>.Instance);
             var neverCompletes = new TaskCompletionSource();
 
-            var task = middleware.Execute(_ => neverCompletes.Task, TestContext.Current.CancellationToken);
+            var task = middleware.ExecuteAsync(_ => neverCompletes.Task, TestContext.Current.CancellationToken);
 
             task.IsCompleted.ShouldBeTrue();
             neverCompletes.SetCanceled(TestContext.Current.CancellationToken);
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrowsNonCancellationException_DoesNotPropagateException()
+        public async Task ExecuteAsync_WhenNextThrowsNonCancellationException_DoesNotPropagateException()
         {
             var middleware = new FireAndForgetMiddleware(NullLogger<FireAndForgetMiddleware>.Instance);
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
+                middleware.ExecuteAsync(_ => Task.FromException(new InvalidOperationException()), TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrowsNonCancellationException_LogsError()
+        public async Task ExecuteAsync_WhenNextThrowsNonCancellationException_LogsError()
         {
             var logger = new SignalOnLogLogger();
             var middleware = new FireAndForgetMiddleware(logger);
             var exception = new InvalidOperationException("test error");
 
-            await middleware.Execute(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
+            await middleware.ExecuteAsync(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
             await logger.WhenLogged.WaitAsync(TestContext.Current.CancellationToken);
 
             var log = logger.Collector.GetSnapshot().ShouldHaveSingleItem();
@@ -52,14 +52,14 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrowsOperationCanceledException_DuringShutdown_DoesNotLog()
+        public async Task ExecuteAsync_WhenNextThrowsOperationCanceledException_DuringShutdown_DoesNotLog()
         {
             using var cts = new CancellationTokenSource();
             var logger = new FakeLogger<FireAndForgetMiddleware>();
             var middleware = new FireAndForgetMiddleware(logger);
             var nextDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            await middleware.Execute(_ =>
+            await middleware.ExecuteAsync(_ =>
             {
                 cts.Cancel();
                 nextDone.TrySetResult();
@@ -72,13 +72,13 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_WhenNextThrowsOperationCanceledException_WithoutShutdown_LogsError()
+        public async Task ExecuteAsync_WhenNextThrowsOperationCanceledException_WithoutShutdown_LogsError()
         {
             var logger = new SignalOnLogLogger();
             var middleware = new FireAndForgetMiddleware(logger);
             var exception = new OperationCanceledException();
 
-            await middleware.Execute(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
+            await middleware.ExecuteAsync(_ => Task.FromException(exception), TestContext.Current.CancellationToken);
             await logger.WhenLogged.WaitAsync(TestContext.Current.CancellationToken);
 
             var log = logger.Collector.GetSnapshot().ShouldHaveSingleItem();

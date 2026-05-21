@@ -25,7 +25,7 @@ namespace WorkR.Triggers.Timers
             _runOnStartup = runOnStartup;
         }
 
-        public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Delay trigger initialised with delay: {delay} and runOnStartup {runOnStartup}", _delay, _runOnStartup);
 
@@ -50,7 +50,7 @@ namespace WorkR.Triggers.Timers
 
                     try
                     {
-                        await next(context, stoppingToken).ConfigureAwait(false);
+                        await workerPipeline(context, stoppingToken).ConfigureAwait(false);
                         _logger.LogDebug("Delay trigger executed");
                     }
                     catch (OperationCanceledException)

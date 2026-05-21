@@ -2,6 +2,6 @@
 {
     public interface IWorkerMiddleware
     {
-        Task Execute(Func<CancellationToken, Task> next, CancellationToken ct);
+        Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken);
     }
 }

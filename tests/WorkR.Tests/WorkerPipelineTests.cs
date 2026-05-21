@@ -164,15 +164,15 @@ namespace WorkR.Tests
 
         private sealed class UpperCaseWorker : IWorker<string, string>
         {
-            public Task Execute(string source, WorkerDelegate<string> next, CancellationToken ct) =>
-                next(source.ToUpper(), ct);
+            public Task ExecuteAsync(string source, WorkerDelegate<string> next, CancellationToken cancellationToken) =>
+                next(source.ToUpper(), cancellationToken);
         }
 
         private sealed class CapturingWorker : IWorker<string>
         {
             public string? Captured { get; private set; }
 
-            public Task Execute(string source, CancellationToken ct)
+            public Task ExecuteAsync(string source, CancellationToken cancellationToken)
             {
                 Captured = source;
                 return Task.CompletedTask;
@@ -185,10 +185,10 @@ namespace WorkR.Tests
 
             public CallbackMiddleware(Action onExecute) => _onExecute = onExecute;
 
-            public async Task Execute(Func<CancellationToken, Task> next, CancellationToken ct)
+            public async Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
             {
                 _onExecute();
-                await next(ct);
+                await next(cancellationToken);
             }
         }
     }
