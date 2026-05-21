@@ -19,7 +19,7 @@ namespace WorkR.Triggers.Timers.Tests
                     services.AddLogging(b => b.ClearProviders());
                     services.AddSingleton(log);
                     services.AddScoped<ScopedId>();
-                    services.AddDelayWorker<ScopeCapturingWorker>(TimeSpan.FromMilliseconds(1));
+                    services.AddDelayWorker<ScopeCapturingWorker>(TimeSpan.FromMilliseconds(1), runOnStartup: true);
                 })
                 .Build();
 

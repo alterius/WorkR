@@ -11,7 +11,8 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddDelayWorker(
             this IServiceCollection services,
             TimeSpan delay,
-            WorkerPipelineBuilderDelegate<DelayTrigger, EmptyTriggerContext> builder)
+            WorkerPipelineBuilderDelegate<DelayTrigger, EmptyTriggerContext> builder,
+            bool runOnStartup = false)
         {
             services.TryAddSingleton(TimeProvider.System);
 
@@ -19,7 +20,8 @@ namespace WorkR.Triggers.Timers
                 sp => new DelayTrigger(
                     delay,
                     sp.GetRequiredService<TimeProvider>(),
-                    sp.GetRequiredService<ILogger<DelayTrigger>>()),
+                    sp.GetRequiredService<ILogger<DelayTrigger>>(),
+                    runOnStartup),
                 builder,
                 static mw => mw
                     .UseScope());
@@ -28,13 +30,15 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddDelayWorker<TWorker>(
             this IServiceCollection services,
             TimeSpan delay,
+            bool runOnStartup = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
         {
             return services.AddDelayWorker(
                 delay,
-                builder => builder.AddWorker<TWorker>(workerLifetime, middleware));
+                builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
+                runOnStartup);
         }
 
         public static IServiceCollection AddScheduledWorker(

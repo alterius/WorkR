@@ -7,11 +7,13 @@ namespace WorkR.Triggers.Timers
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _delay;
         private readonly ILogger _logger;
+        private readonly bool _runOnStartup;
 
         public DelayTrigger(
             TimeSpan delay,
             TimeProvider timeProvider,
-            ILogger<DelayTrigger> logger)
+            ILogger<DelayTrigger> logger,
+            bool runOnStartup = false)
         {
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(delay.Ticks, nameof(delay));
@@ -20,14 +22,20 @@ namespace WorkR.Triggers.Timers
             _timeProvider = timeProvider;
             _delay = delay;
             _logger = logger;
+            _runOnStartup = runOnStartup;
         }
 
         public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Delay trigger initialised with delay: {delay}", _delay);
+            _logger.LogInformation("Delay trigger initialised with delay: {delay} and runOnStartup {runOnStartup}", _delay, _runOnStartup);
 
             try
             {
+                if (!_runOnStartup)
+                {
+                    await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
+                }
+
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());

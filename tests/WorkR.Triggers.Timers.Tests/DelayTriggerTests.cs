@@ -37,12 +37,12 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task Execute_CallsNextBeforeFirstDelay()
+        public async Task Execute_WhenRunOnStartupIsTrue_CallsNextBeforeFirstDelay()
         {
             var timeProvider = new FakeTimeProvider();
             var called = false;
             using var cts = new CancellationTokenSource();
-            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
             var executeTask = trigger.Execute((ctx, ct) =>
             {
@@ -58,13 +58,57 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
+        public async Task Execute_WhenRunOnStartupIsFalse_DoesNotCallNextBeforeFirstDelay()
+        {
+            var timeProvider = new FakeTimeProvider();
+            var called = false;
+            using var cts = new CancellationTokenSource();
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: false);
+
+            var executeTask = trigger.Execute((ctx, ct) =>
+            {
+                called = true;
+                return Task.CompletedTask;
+            }, cts.Token);
+
+            // Trigger is suspended in Task.Delay, waiting for the first delay to elapse
+            called.ShouldBeFalse();
+
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+        }
+
+        [Fact]
+        public async Task Execute_WhenRunOnStartupIsFalse_CallsNextAfterFirstDelay()
+        {
+            var timeProvider = new FakeTimeProvider();
+            var called = false;
+            using var cts = new CancellationTokenSource();
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: false);
+
+            var executeTask = trigger.Execute((ctx, ct) =>
+            {
+                called = true;
+                cts.Cancel();
+                return Task.CompletedTask;
+            }, cts.Token);
+
+            called.ShouldBeFalse();
+
+            timeProvider.Advance(TimeSpan.FromSeconds(60));
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            called.ShouldBeTrue();
+        }
+
+        [Fact]
         public async Task Execute_PassesCurrentTimestampToNext()
         {
             var startTime = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
             var timeProvider = new FakeTimeProvider(startTime);
             DateTimeOffset? capturedOccurredAt = null;
             using var cts = new CancellationTokenSource();
-            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
             var executeTask = trigger.Execute((ctx, ct) =>
             {
@@ -85,7 +129,7 @@ namespace WorkR.Triggers.Timers.Tests
             var callCount = 0;
             var secondCallStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
-            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
             var executeTask = trigger.Execute((ctx, ct) =>
             {
@@ -110,7 +154,7 @@ namespace WorkR.Triggers.Timers.Tests
         {
             var timeProvider = new FakeTimeProvider();
             using var cts = new CancellationTokenSource();
-            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
             var executeTask = trigger.Execute((_, _) => Task.CompletedTask, cts.Token);
 
@@ -143,7 +187,7 @@ namespace WorkR.Triggers.Timers.Tests
             var called = false;
             using var cts = new CancellationTokenSource();
             await cts.CancelAsync();
-            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
             await trigger.Execute((_, _) =>
             {
@@ -178,7 +222,7 @@ namespace WorkR.Triggers.Timers.Tests
             var secondCallDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
 
-            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
             var executeTask = trigger.Execute((_, _) =>
             {
@@ -205,7 +249,7 @@ namespace WorkR.Triggers.Timers.Tests
             var logger = new FakeLogger<DelayTrigger>();
             var logged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
-            var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger);
+            var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger, runOnStartup: true);
 
             var executeTask = trigger.Execute((_, _) =>
             {
@@ -226,7 +270,7 @@ namespace WorkR.Triggers.Timers.Tests
             var timeProvider = new FakeTimeProvider();
             using var cts = new CancellationTokenSource();
 
-            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60));
+            var trigger = Create(timeProvider, TimeSpan.FromSeconds(60), runOnStartup: true);
 
             var executeTask = trigger.Execute((_, ct) =>
             {
@@ -240,7 +284,8 @@ namespace WorkR.Triggers.Timers.Tests
 
         private static DelayTrigger Create(
             FakeTimeProvider timeProvider,
-            TimeSpan delay) =>
-            new(delay, timeProvider, new FakeLogger<DelayTrigger>());
+            TimeSpan delay,
+            bool runOnStartup = false) =>
+            new(delay, timeProvider, new FakeLogger<DelayTrigger>(), runOnStartup);
     }
 }
