@@ -39,6 +39,13 @@
         /// Set to 0 to disable automatic dead-lettering.
         /// Defaults to 5.
         /// </summary>
-        public int DeadLetterThreshold { get; set; } = 5;
+        public int MaxDeliveryCount { get; set; } = 5;
+
+        /// <summary>
+        /// The maximum number of worker executions that may run concurrently.
+        /// The polling loop applies backpressure once this limit is reached.
+        /// Defaults to 1.
+        /// </summary>
+        public int MaxConcurrentCalls { get; set; } = 1;
     }
 }

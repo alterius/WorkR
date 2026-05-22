@@ -9,8 +9,7 @@ namespace WorkR.Triggers.AzureStorageQueues
     public static class ServiceCollectionExtensions
     {
         private static readonly Action<MiddlewarePipelineBuilder> _defaultMiddleware = static mw =>
-            mw.UseFireAndForget()
-                .UseScope();
+            mw.UseScope();
 
         public static IServiceCollection AddStorageQueueWorker(
             this IServiceCollection services,

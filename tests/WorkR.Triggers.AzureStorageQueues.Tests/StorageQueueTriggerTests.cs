@@ -589,13 +589,91 @@ public class StorageQueueTriggerTests
     }
 
     // ---------------------------------------------------------------------------
+    // MaxConcurrentCalls
+    // ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task WhenMaxConcurrentCallsIsOne_DoesNotStartSecondMessageUntilFirstCompletes()
+    {
+        var messages = new[] { MakeMessage(messageId: "a"), MakeMessage(messageId: "b") };
+        var (serviceClient, queueClient) = SubClients();
+        var batchResponse = MessagesResponse(messages);
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(batchResponse, emptyResponse);
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { MaxMessages = 2, MaxConcurrentCalls = 1 });
+
+        var executeTask = trigger.ExecuteAsync(async (ctx, ct) =>
+        {
+            if (ctx.Value.MessageId == "a")
+            {
+                firstStarted.TrySetResult();
+                await firstGate.Task;
+            }
+            else
+            {
+                secondStarted.TrySetResult();
+            }
+        }, cts.Token);
+
+        await firstStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        secondStarted.Task.IsCompleted.ShouldBeFalse();
+
+        firstGate.TrySetResult();
+        await secondStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+    }
+
+    [Fact]
+    public async Task WhenMaxConcurrentCallsIsTwo_StartsSecondMessageWhileFirstIsRunning()
+    {
+        var messages = new[] { MakeMessage(messageId: "a"), MakeMessage(messageId: "b") };
+        var (serviceClient, queueClient) = SubClients();
+        var batchResponse = MessagesResponse(messages);
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(batchResponse, emptyResponse);
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new CancellationTokenSource();
+        var trigger = MakeTrigger(serviceClient, new StorageQueueTriggerOptions { MaxMessages = 2, MaxConcurrentCalls = 2 });
+
+        var executeTask = trigger.ExecuteAsync(async (ctx, ct) =>
+        {
+            if (ctx.Value.MessageId == "a")
+            {
+                firstStarted.TrySetResult();
+                await firstGate.Task;
+            }
+            else
+            {
+                secondStarted.TrySetResult();
+            }
+        }, cts.Token);
+
+        await firstStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await secondStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        firstGate.TrySetResult();
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+    }
+
+    // ---------------------------------------------------------------------------
     // Dead-letter threshold
     // ---------------------------------------------------------------------------
 
     [Fact]
     public async Task WhenDequeueCountReachesThreshold_DeadLettersMessage()
     {
-        var options = new StorageQueueTriggerOptions { DeadLetterThreshold = 3 };
+        var options = new StorageQueueTriggerOptions { MaxDeliveryCount = 3 };
         var message = QueuesModelFactory.QueueMessage("m1", "p1", BinaryData.FromString("{}"), dequeueCount: 3);
         var (serviceClient, queueClient) = SubClients();
         var poisonClient = Substitute.For<QueueClient>();
@@ -626,7 +704,7 @@ public class StorageQueueTriggerTests
     [Fact]
     public async Task WhenDequeueCountBelowThreshold_DoesNotDeadLetterMessage()
     {
-        var options = new StorageQueueTriggerOptions { DeadLetterThreshold = 3, MaxMessages = 2 };
+        var options = new StorageQueueTriggerOptions { MaxDeliveryCount = 3, MaxMessages = 2 };
         var badMessage = QueuesModelFactory.QueueMessage("m1", "p1", BinaryData.FromString("{}"), dequeueCount: 2);
         var goodMessage = MakeMessage(messageId: "m2");
         var (serviceClient, queueClient) = SubClients();
@@ -659,7 +737,7 @@ public class StorageQueueTriggerTests
     [Fact]
     public async Task WhenDeadLetterThresholdIsZero_NeverDeadLetters()
     {
-        var options = new StorageQueueTriggerOptions { DeadLetterThreshold = 0, MaxMessages = 2 };
+        var options = new StorageQueueTriggerOptions { MaxDeliveryCount = 0, MaxMessages = 2 };
         var badMessage = QueuesModelFactory.QueueMessage("m1", "p1", BinaryData.FromString("{}"), dequeueCount: 100);
         var goodMessage = MakeMessage(messageId: "m2");
         var (serviceClient, queueClient) = SubClients();

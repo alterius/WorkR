@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Azure;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
@@ -44,6 +45,9 @@ namespace WorkR.Triggers.AzureStorageQueues
 
             var consecutiveEmptyPolls = 0;
             var consecutiveErrors = 0;
+            var executingTasks = new ConcurrentDictionary<Guid, Task>();
+            
+            using var semaphore = new SemaphoreSlim(_options.MaxConcurrentCalls, _options.MaxConcurrentCalls);
 
             try
             {
@@ -101,53 +105,81 @@ namespace WorkR.Triggers.AzureStorageQueues
                     {
                         var executionId = Guid.NewGuid();
 
-                        using var __ = _logger.BeginScope(new
-                        {
-                            ExecutionId = executionId,
-                            message.MessageId,
-                        });
-
-                        _logger.LogDebug("Storage queue trigger executing...");
+                        await semaphore.WaitAsync(stoppingToken).ConfigureAwait(false);
 
                         try
                         {
-                            var context = await _contextFactory(executionId, message).ConfigureAwait(false);
+                            executingTasks.TryAdd(
+                                executionId,
+                                Task.Run(async () =>
+                                {
+                                    using var __ = _logger.BeginScope(new
+                                    {
+                                        ExecutionId = executionId,
+                                        message.MessageId,
+                                    });
 
-                            await workerPipeline(context, stoppingToken).ConfigureAwait(false);
+                                    _logger.LogDebug("Storage queue trigger executing...");
 
-                            if (_options.AutoCompleteMessages)
-                            {
-                                await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, stoppingToken);
-                            }
+                                    try
+                                    {
+                                        var context = await _contextFactory(executionId, message).ConfigureAwait(false);
 
-                            _logger.LogDebug("Storage queue trigger executed");
+                                        await workerPipeline(context, stoppingToken).ConfigureAwait(false);
+
+                                        if (_options.AutoCompleteMessages)
+                                        {
+                                            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, stoppingToken);
+                                        }
+
+                                        _logger.LogDebug("Storage queue trigger executed");
+                                    }
+                                    catch (OperationCanceledException)
+                                        when (stoppingToken.IsCancellationRequested)
+                                    {
+                                        // Expected shutdown
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
+
+                                        if (_options.MaxDeliveryCount > 0 && message.DequeueCount >= _options.MaxDeliveryCount)
+                                        {
+                                            try
+                                            {
+                                                await DeadLetterMessageAsync(message, CancellationToken.None).ConfigureAwait(false);
+                                            }
+                                            catch (Exception ex2)
+                                            {
+                                                _logger.LogError(ex2, "Failed to dead letter message");
+                                            }
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        semaphore.Release();
+                                        executingTasks.TryRemove(executionId, out var ___);
+                                    }
+                                }, stoppingToken));
                         }
-                        catch (OperationCanceledException)
-                            when (stoppingToken.IsCancellationRequested)
+                        catch (Exception)
                         {
+                            semaphore.Release();
                             throw;
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
-
-                            if (_options.DeadLetterThreshold > 0 && message.DequeueCount >= _options.DeadLetterThreshold)
-                            {
-                                try
-                                {
-                                    await DeadLetterMessageAsync(message, CancellationToken.None).ConfigureAwait(false);
-                                }
-                                catch (Exception ex2)
-                                {
-                                    _logger.LogError(ex2, "Failed to dead letter message");
-                                }
-                            }
                         }
                     }
                 }
             }
             finally
             {
+                try
+                {
+                    await Task.WhenAll(executingTasks.Values);
+                }
+                catch (Exception)
+                {
+                }
+
                 _logger.LogInformation("Storage queue trigger stopped");
             }
         }
