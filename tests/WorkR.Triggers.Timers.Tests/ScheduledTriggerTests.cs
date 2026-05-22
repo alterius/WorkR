@@ -60,18 +60,17 @@ namespace WorkR.Triggers.Timers.Tests
         public async Task ExecuteAsync_WhenRunOnStartupIsTrue_CallsWorkerPipelineImmediately()
         {
             var timeProvider = new FakeTimeProvider(StartTime);
-            var called = false;
+            var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, EveryMinuteSchedule, runOnStartup: true);
 
             var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
-                called = true;
+                workerInvoked.TrySetResult();
                 return Task.CompletedTask;
             }, cts.Token);
 
-            // Startup call happens synchronously before the while loop's first Task.Delay
-            called.ShouldBeTrue();
+            await workerInvoked.Task.WaitAsync(TestContext.Current.CancellationToken);
 
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
@@ -82,14 +81,18 @@ namespace WorkR.Triggers.Timers.Tests
         {
             var timeProvider = new FakeTimeProvider(StartTime);
             DateTimeOffset? capturedOccurredAt = null;
+            var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, EveryMinuteSchedule, runOnStartup: true);
 
             var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
                 capturedOccurredAt ??= ctx.OccurredAt;
+                workerInvoked.TrySetResult();
                 return Task.CompletedTask;
             }, cts.Token);
+
+            await workerInvoked.Task.WaitAsync(TestContext.Current.CancellationToken);
 
             capturedOccurredAt.ShouldBe(StartTime);
 
@@ -101,23 +104,23 @@ namespace WorkR.Triggers.Timers.Tests
         public async Task ExecuteAsync_CallsWorkerPipelineAtScheduledTime()
         {
             var timeProvider = new FakeTimeProvider(StartTime);
-            var called = false;
+            var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, EveryMinuteSchedule);
 
             var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
-                called = true;
-                cts.Cancel();
+                workerInvoked.TrySetResult();
                 return Task.CompletedTask;
             }, cts.Token);
 
-            called.ShouldBeFalse();
+            workerInvoked.Task.IsCompleted.ShouldBeFalse();
 
             timeProvider.Advance(TimeSpan.FromMinutes(1));
-            await executeTask;
+            await workerInvoked.Task.WaitAsync(TestContext.Current.CancellationToken);
 
-            called.ShouldBeTrue();
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
         }
 
         [Fact]
@@ -125,24 +128,28 @@ namespace WorkR.Triggers.Timers.Tests
         {
             var timeProvider = new FakeTimeProvider(StartTime);
             DateTimeOffset? capturedOccurredAt = null;
+            var workerInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
             var trigger = Create(timeProvider, EveryMinuteSchedule);
 
             var executeTask = trigger.ExecuteAsync((ctx, ct) =>
             {
                 capturedOccurredAt = ctx.OccurredAt;
-                cts.Cancel();
+                workerInvoked.TrySetResult();
                 return Task.CompletedTask;
             }, cts.Token);
 
             timeProvider.Advance(TimeSpan.FromMinutes(1));
-            await executeTask;
+            await workerInvoked.Task.WaitAsync(TestContext.Current.CancellationToken);
 
             // Compute expected the same way the trigger does: GetNextOccurrence returns a DateTime
             // which is then implicitly converted to DateTimeOffset
             var expectedNextOccurrence = CrontabSchedule.Parse(EveryMinuteSchedule)
                 .GetNextOccurrence(StartTime.UtcDateTime);
             capturedOccurredAt.ShouldBe(new DateTimeOffset(expectedNextOccurrence));
+
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
         }
 
         [Fact]
@@ -216,23 +223,26 @@ namespace WorkR.Triggers.Timers.Tests
         {
             var timeProvider = new FakeTimeProvider(StartTime);
             var callCount = 0;
+            var secondCallDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
 
             var trigger = Create(timeProvider, EveryMinuteSchedule);
 
             var executeTask = trigger.ExecuteAsync((_, _) =>
             {
-                callCount++;
-                if (callCount >= 2)
-                    cts.Cancel();
+                if (Interlocked.Increment(ref callCount) >= 2)
+                    secondCallDone.TrySetResult();
                 throw new InvalidOperationException();
             }, cts.Token);
 
             timeProvider.Advance(TimeSpan.FromMinutes(1));
             timeProvider.Advance(TimeSpan.FromMinutes(1));
-            await executeTask;
+            await secondCallDone.Task.WaitAsync(TestContext.Current.CancellationToken);
 
-            callCount.ShouldBe(2);
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            callCount.ShouldBeGreaterThanOrEqualTo(2);
         }
 
         [Fact]
@@ -240,16 +250,19 @@ namespace WorkR.Triggers.Timers.Tests
         {
             var timeProvider = new FakeTimeProvider(StartTime);
             var logger = new FakeLogger<ScheduledTrigger>();
+            var workerThrew = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
             var trigger = new ScheduledTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger, runOnStartup: true);
 
             var executeTask = trigger.ExecuteAsync((_, _) =>
             {
-                cts.Cancel();
+                workerThrew.TrySetResult();
                 throw new InvalidOperationException("boom");
             }, cts.Token);
 
-            await executeTask;
+            await workerThrew.Task.WaitAsync(TestContext.Current.CancellationToken);
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
             logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
         }

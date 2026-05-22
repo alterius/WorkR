@@ -65,7 +65,6 @@ namespace WorkR.Triggers.Timers
                     runOnStartup),
                 builder,
                 static mw => mw
-                    .UseFireAndForget()
                     .UseScope());
         }
 

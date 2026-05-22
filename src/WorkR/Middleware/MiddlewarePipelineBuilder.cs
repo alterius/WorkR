@@ -30,9 +30,6 @@ namespace WorkR.Middleware
             return this;
         }
 
-        public MiddlewarePipelineBuilder UseFireAndForget() =>
-            UseMiddleware(sp => new FireAndForgetMiddleware(sp.GetRequiredService<ILogger<FireAndForgetMiddleware>>()));
-
         public MiddlewarePipelineBuilder UseErrorHandling<TException>(Func<TException, bool>? predicate = null)
             where TException : Exception =>
                 UseMiddleware(sp => new ErrorHandlingMiddleware<TException>(

@@ -50,7 +50,7 @@ namespace WorkR.Triggers.Timers
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)
                 {
-                    throw;
+                    // Expected shutdown
                 }
                 catch (Exception ex)
                 {
@@ -62,7 +62,7 @@ namespace WorkR.Triggers.Timers
             {
                 if (_runOnStartup)
                 {
-                    await Next(_timeProvider.GetUtcNow()).ConfigureAwait(false);
+                    _ = Task.Run(() => Next(_timeProvider.GetUtcNow()), stoppingToken);
                 }
 
                 while (!stoppingToken.IsCancellationRequested)
@@ -74,7 +74,8 @@ namespace WorkR.Triggers.Timers
                     _logger.LogDebug("Scheduled trigger next execution at {nextExecutionAt}", nextOccurrenceUtc);
 
                     await Task.Delay(delay, _timeProvider, stoppingToken).ConfigureAwait(false);
-                    await Next(nextOccurrenceUtc).ConfigureAwait(false);
+
+                    _ = Task.Run(() => Next(nextOccurrenceUtc), stoppingToken);
                 }
             }
             finally
