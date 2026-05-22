@@ -3,6 +3,9 @@
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010-blue)](https://dotnet.microsoft.com)
 [![NuGet](https://img.shields.io/nuget/v/WorkR?label=WorkR)](https://www.nuget.org/packages/WorkR)
 [![NuGet](https://img.shields.io/nuget/v/WorkR.Abstractions?label=WorkR.Abstractions)](https://www.nuget.org/packages/WorkR.Abstractions)
+[![NuGet](https://img.shields.io/nuget/v/WorkR.Abstractions?label=WorkR.Triggers.Timers)](https://www.nuget.org/packages/WorkR.Triggers.Timers)
+[![NuGet](https://img.shields.io/nuget/v/WorkR.Triggers.AzureStorageQueues?label=WorkR.Triggers.AzureStorageQueues)](https://www.nuget.org/packages/WorkR.Triggers.AzureStorageQueues)
+[![NuGet](https://img.shields.io/nuget/v/WorkR.Triggers.AzureServiceBus?label=WorkR.Triggers.AzureServiceBus)](https://www.nuget.org/packages/WorkR.Triggers.AzureServiceBus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 WorkR is a lightweight, extensible .NET library for building composable background worker pipelines on top of `BackgroundService`. It replaces deeply nested loops and ad-hoc polling logic with a clean, testable, and DI-friendly abstraction.
@@ -86,6 +89,8 @@ builder.Services.AddScheduledWorker<MyWorker>("*/5 * * * *");
 | [`WorkR.Abstractions`](src/WorkR.Abstractions/README.md) | Core interfaces: `ITrigger<T>`, `IWorker<T>`, `IWorkerMiddleware`, `TriggerContext`. Reference this from libraries that define reusable workers, triggers, or middleware. |
 | [`WorkR`](src/WorkR/README.md) | Core implementation: pipeline builder, built-in middleware, `AddWorker`, `AddRunOnceWorker`. |
 | [`WorkR.Triggers.Timers`](src/WorkR.Triggers.Timers/README.md) | Delay and cron-scheduled triggers: `AddDelayWorker`, `AddScheduledWorker`. |
+| [`WorkR.Triggers.AzureStorageQueues`](src/WorkR.Triggers.AzureStorageQueues/README.md) | Azure Storage Queue trigger: `AddStorageQueueWorker`. |
+| [`WorkR.Triggers.AzureServiceBus`](src/WorkR.Triggers.AzureServiceBus/README.md) | Azure Service Bus trigger: `AddServiceBusWorker`. |
 
 ---
 
