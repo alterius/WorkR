@@ -285,6 +285,127 @@ namespace WorkR.Triggers.Timers.Tests
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
         }
 
+        [Fact]
+        public async Task ExecuteAsync_WhenCancelOnOverlapIsTrue_CancelsRunningExecutionOnNextFiring()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var logger = new FakeLogger<ScheduledTrigger>();
+            using var cts = new CancellationTokenSource();
+            var trigger = new ScheduledTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider,
+                logger, cancelOnOverlap: true);
+
+            var executeTask = trigger.ExecuteAsync(async (ctx, ct) =>
+            {
+                firstStarted.TrySetResult();
+                await Task.Delay(Timeout.Infinite, ct);
+            }, cts.Token);
+
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+            await firstStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+
+            // Poll until Next() has caught the OperationCanceledException and logged the warning
+            var warningLogged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _ = Task.Run(async () =>
+            {
+                while (!logger.Collector.GetSnapshot().Any(l => l.Level == LogLevel.Warning))
+                    await Task.Delay(10, TestContext.Current.CancellationToken);
+                warningLogged.TrySetResult();
+            }, TestContext.Current.CancellationToken);
+            await warningLogged.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Warning);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_WhenCancelOnOverlapIsFalse_DoesNotCancelRunningExecution()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var callCount = 0;
+            using var cts = new CancellationTokenSource();
+            var trigger = Create(timeProvider, EveryMinuteSchedule);
+
+            var executeTask = trigger.ExecuteAsync(async (ctx, ct) =>
+            {
+                if (Interlocked.Increment(ref callCount) == 1)
+                {
+                    firstStarted.TrySetResult();
+                    await firstGate.Task;
+                }
+                else
+                {
+                    secondStarted.TrySetResult();
+                }
+            }, cts.Token);
+
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+            await firstStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+            await secondStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            firstGate.TrySetResult();
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_OnShutdown_AwaitsInFlightExecutionsBeforeStopping()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var workerStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var workerGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var workerCompleted = false;
+            using var cts = new CancellationTokenSource();
+            var trigger = Create(timeProvider, EveryMinuteSchedule);
+
+            var executeTask = trigger.ExecuteAsync(async (ctx, ct) =>
+            {
+                workerStarted.TrySetResult();
+                await workerGate.Task.WaitAsync(TestContext.Current.CancellationToken);
+                workerCompleted = true;
+            }, cts.Token);
+
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+            await workerStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            await cts.CancelAsync();
+            workerCompleted.ShouldBeFalse();
+
+            workerGate.TrySetResult();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            workerCompleted.ShouldBeTrue();
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_WhenCancelOnOverlapIsFalse_ShutdownDoesNotLogWarning()
+        {
+            var timeProvider = new FakeTimeProvider(StartTime);
+            var logger = new FakeLogger<ScheduledTrigger>();
+            using var cts = new CancellationTokenSource();
+            var trigger = new ScheduledTrigger(CrontabSchedule.Parse(EveryMinuteSchedule), timeProvider, logger);
+
+            var executeTask = trigger.ExecuteAsync(async (ctx, ct) =>
+            {
+                await Task.Delay(Timeout.Infinite, ct);
+            }, cts.Token);
+
+            timeProvider.Advance(TimeSpan.FromMinutes(1));
+            await cts.CancelAsync();
+            await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+            logger.Collector.GetSnapshot().ShouldNotContain(log => log.Level == LogLevel.Warning);
+        }
+
         private static ScheduledTrigger Create(
             FakeTimeProvider timeProvider,
             string schedule,

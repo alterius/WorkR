@@ -46,7 +46,8 @@ namespace WorkR.Triggers.Timers
             string schedule,
             WorkerPipelineBuilderDelegate<ScheduledTrigger, EmptyTriggerContext> builder,
             bool runOnStartup = false,
-            bool includeSeconds = false)
+            bool includeSeconds = false,
+            bool cancelOnOverlap = false)
         {
             services.TryAddSingleton(TimeProvider.System);
 
@@ -62,7 +63,8 @@ namespace WorkR.Triggers.Timers
                     cronTabSchedule,
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ScheduledTrigger>>(),
-                    runOnStartup),
+                    runOnStartup,
+                    cancelOnOverlap),
                 builder,
                 static mw => mw
                     .UseScope());
@@ -73,6 +75,7 @@ namespace WorkR.Triggers.Timers
             string schedule,
             bool runOnStartup = false,
             bool includeSeconds = false,
+            bool cancelOnOverlap = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
@@ -81,7 +84,8 @@ namespace WorkR.Triggers.Timers
                 schedule,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
                 runOnStartup,
-                includeSeconds);
+                includeSeconds,
+                cancelOnOverlap);
         }
     }
 }

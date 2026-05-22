@@ -79,6 +79,16 @@ Enable six-field cron expressions (seconds field prepended):
 builder.Services.AddScheduledWorker<MyWorker>("*/30 * * * * *", includeSeconds: true);
 ```
 
+### With overlap cancellation
+
+Cancel a still-running execution when the next scheduled firing arrives:
+
+```csharp
+builder.Services.AddScheduledWorker<MyWorker>("*/5 * * * *", cancelOnOverlap: true);
+```
+
+When `cancelOnOverlap` is `true` the previous execution's `CancellationToken` is cancelled before the new one starts. The old execution is not awaited — it drains in the background while the new one proceeds.
+
 ### With full pipeline control
 
 ```csharp
