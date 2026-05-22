@@ -7,7 +7,9 @@ namespace WorkR.Triggers.RunOnce
         private readonly TimeProvider _timeProvider;
         private readonly ILogger _logger;
 
-        public RunOnceTrigger(TimeProvider timeProvider, ILogger<RunOnceTrigger> logger)
+        public RunOnceTrigger(
+            TimeProvider timeProvider,
+            ILogger<RunOnceTrigger> logger)
         {
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentNullException.ThrowIfNull(logger);
@@ -16,7 +18,7 @@ namespace WorkR.Triggers.RunOnce
             _logger = logger;
         }
 
-        public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Run once trigger executing...");
 
@@ -30,11 +32,20 @@ namespace WorkR.Triggers.RunOnce
 
             try
             {
-                await next(context, stoppingToken).ConfigureAwait(false);
+                await workerPipeline(context, stoppingToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
             }
             finally
             {
-                _logger.LogInformation("Run once trigger exited");
+                _logger.LogInformation("Run once trigger stopped");
             }
         }
     }

@@ -14,10 +14,10 @@
             _timeout = timeout;
         }
 
-        public async Task Execute(Func<CancellationToken, Task> next, CancellationToken ct)
+        public async Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
         {
             using var timeoutCts = new CancellationTokenSource(_timeout, _timeProvider);
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
             await next(cts.Token).ConfigureAwait(false);
         }

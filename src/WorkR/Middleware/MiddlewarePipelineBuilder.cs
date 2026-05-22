@@ -15,7 +15,7 @@ namespace WorkR.Middleware
             _middleware.Add(next => (sp, ct) =>
             {
                 var middleware = factory(sp);
-                return middleware.Execute(ct2 => next(sp, ct2), ct);
+                return middleware.ExecuteAsync(ct2 => next(sp, ct2), ct);
             });
 
             return this;
@@ -25,13 +25,10 @@ namespace WorkR.Middleware
         {
             ArgumentNullException.ThrowIfNull(middleware);
 
-            _middleware.Add(next => (sp, ct) => middleware.Execute(ct2 => next(sp, ct2), ct));
+            _middleware.Add(next => (sp, ct) => middleware.ExecuteAsync(ct2 => next(sp, ct2), ct));
 
             return this;
         }
-
-        public MiddlewarePipelineBuilder UseFireAndForget() =>
-            UseMiddleware(sp => new FireAndForgetMiddleware(sp.GetRequiredService<ILogger<FireAndForgetMiddleware>>()));
 
         public MiddlewarePipelineBuilder UseErrorHandling<TException>(Func<TException, bool>? predicate = null)
             where TException : Exception =>
@@ -53,7 +50,7 @@ namespace WorkR.Middleware
             _middleware.Add(next => (sp, ct) =>
             {
                 var middleware = factory(sp);
-                return middleware.Execute(sp, next, ct);
+                return middleware.ExecuteAsync(sp, next, ct);
             });
 
             return this;
@@ -63,7 +60,7 @@ namespace WorkR.Middleware
         {
             ArgumentNullException.ThrowIfNull(middleware);
 
-            _middleware.Add(next => (sp, ct) => middleware.Execute(sp, next, ct));
+            _middleware.Add(next => (sp, ct) => middleware.ExecuteAsync(sp, next, ct));
 
             return this;
         }

@@ -167,8 +167,8 @@ namespace WorkR.Tests
                 _execute = execute ?? ((_, _) => Task.CompletedTask);
             }
 
-            public Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken) =>
-                _execute(next, stoppingToken);
+            public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+                _execute(workerPipeline, stoppingToken);
         }
     }
 }

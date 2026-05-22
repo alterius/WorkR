@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using WorkR.Middleware;
 
 namespace WorkR.Triggers.RunOnce
@@ -13,11 +14,12 @@ namespace WorkR.Triggers.RunOnce
             services.TryAddSingleton(TimeProvider.System);
 
             return services.AddWorker(
-                sp => ActivatorUtilities.CreateInstance<RunOnceTrigger>(sp),
+                sp => new RunOnceTrigger(
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<RunOnceTrigger>>()),
                 builder,
                 static mw => mw
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                    .UseScope());
         }
 
         public static IServiceCollection AddRunOnceWorker<TWorker>(

@@ -16,11 +16,11 @@ namespace WorkR.Middleware
             _predicate = predicate;
         }
 
-        public async Task Execute(Func<CancellationToken, Task> next, CancellationToken ct)
+        public async Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
         {
             try
             {
-                await next(ct).ConfigureAwait(false);
+                await next(cancellationToken).ConfigureAwait(false);
             }
             catch (TException ex)
                 when (_predicate?.Invoke(ex) ?? true)

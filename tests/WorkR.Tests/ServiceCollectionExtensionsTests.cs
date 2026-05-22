@@ -55,13 +55,13 @@ namespace WorkR.Tests
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
-            public Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken ct) =>
+            public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 Task.CompletedTask;
         }
 
         private sealed class FakeWorker : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct) => Task.CompletedTask;
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

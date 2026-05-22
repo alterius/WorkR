@@ -39,7 +39,7 @@ namespace WorkR.Tests.Triggers.RunOnce
 
         private sealed class FakeWorker : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct) => Task.CompletedTask;
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

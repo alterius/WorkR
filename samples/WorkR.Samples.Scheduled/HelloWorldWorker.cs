@@ -11,7 +11,7 @@ namespace WorkR.Samples.Scheduled
             _logger = logger;
         }
 
-        public Task Execute(EmptyTriggerContext _, CancellationToken ct)
+        public Task ExecuteAsync(EmptyTriggerContext _, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Hello world!");
             return Task.CompletedTask;

@@ -12,18 +12,18 @@ namespace WorkR.Samples.CustomTrigger
             _timeProvider = timeProvider;
         }
 
-        public async Task Execute(WorkerDelegate<ValueTriggerContext<int>> next, CancellationToken ct)
+        public async Task ExecuteAsync(WorkerDelegate<ValueTriggerContext<int>> workerPipeline, CancellationToken stoppingToken)
         {
-            while (!ct.IsCancellationRequested)
+            while (!stoppingToken.IsCancellationRequested)
             {
                 var context = new ValueTriggerContext<int>(
                     _timeProvider.GetUtcNow(),
                     RandomNumberGenerator.GetInt32(100));
 
-                await next(context, ct).ConfigureAwait(false);
+                await workerPipeline(context, stoppingToken).ConfigureAwait(false);
 
                 var delay = RandomNumberGenerator.GetInt32(1000, 10000);
-                await Task.Delay(delay, ct).ConfigureAwait(false);
+                await Task.Delay(delay, stoppingToken).ConfigureAwait(false);
             }
         }
     }

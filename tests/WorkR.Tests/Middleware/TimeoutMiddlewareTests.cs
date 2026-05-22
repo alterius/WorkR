@@ -29,22 +29,22 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_WhenNextCompletesBeforeTimeout_Succeeds()
+        public async Task ExecuteAsync_WhenNextCompletesBeforeTimeout_Succeeds()
         {
             var middleware = new TimeoutMiddleware(TimeProvider.System, TimeSpan.FromSeconds(30));
 
             await Should.NotThrowAsync(() =>
-                middleware.Execute(_ => Task.CompletedTask, TestContext.Current.CancellationToken));
+                middleware.ExecuteAsync(_ => Task.CompletedTask, TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task Execute_WhenTimeoutElapses_ThrowsOperationCanceledException()
+        public async Task ExecuteAsync_WhenTimeoutElapses_ThrowsOperationCanceledException()
         {
             var timeProvider = new FakeTimeProvider();
             var middleware = new TimeoutMiddleware(timeProvider, TimeSpan.FromSeconds(5));
             var nextStarted = new SemaphoreSlim(0, 1);
 
-            var task = middleware.Execute(async ct =>
+            var task = middleware.ExecuteAsync(async ct =>
             {
                 nextStarted.Release();
                 await Task.Delay(Timeout.Infinite, ct);
@@ -57,13 +57,13 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
-        public async Task Execute_WhenCallerCancellationTokenCancelled_ThrowsOperationCanceledException()
+        public async Task ExecuteAsync_WhenCallerCancellationTokenCancelled_ThrowsOperationCanceledException()
         {
             var middleware = new TimeoutMiddleware(TimeProvider.System, TimeSpan.FromSeconds(30));
             using var cts = new CancellationTokenSource();
             var nextStarted = new SemaphoreSlim(0, 1);
 
-            var task = middleware.Execute(async ct =>
+            var task = middleware.ExecuteAsync(async ct =>
             {
                 nextStarted.Release();
                 await Task.Delay(Timeout.Infinite, ct);

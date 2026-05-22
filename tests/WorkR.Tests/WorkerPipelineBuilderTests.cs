@@ -93,27 +93,27 @@ namespace WorkR.Tests
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
-            public Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken ct) =>
+            public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 Task.CompletedTask;
         }
 
         private sealed class FakeTerminalWorker : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct) => Task.CompletedTask;
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         private sealed class FakeTransformWorker : IWorker<EmptyTriggerContext, string>
         {
-            public Task Execute(EmptyTriggerContext source, WorkerDelegate<string> next, CancellationToken ct) =>
-                next("result", ct);
+            public Task ExecuteAsync(EmptyTriggerContext source, WorkerDelegate<string> next, CancellationToken cancellationToken) =>
+                next("result", cancellationToken);
         }
 
         private sealed class RecordingMiddleware(Action onExecute) : IWorkerMiddleware
         {
-            public async Task Execute(Func<CancellationToken, Task> next, CancellationToken ct)
+            public async Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
             {
                 onExecute();
-                await next(ct);
+                await next(cancellationToken);
             }
         }
     }

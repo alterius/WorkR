@@ -8,4 +8,8 @@
     <Description>Core interfaces and abstractions for the WorkR background worker framework.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>

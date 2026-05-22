@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using NCrontab;
 using WorkR.Middleware;
 
@@ -10,60 +11,71 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddDelayWorker(
             this IServiceCollection services,
             TimeSpan delay,
-            WorkerPipelineBuilderDelegate<DelayTrigger, EmptyTriggerContext> builder)
+            WorkerPipelineBuilderDelegate<DelayTrigger, EmptyTriggerContext> builder,
+            bool runOnStartup = false)
         {
             services.TryAddSingleton(TimeProvider.System);
 
             return services.AddWorker(
-                sp => ActivatorUtilities.CreateInstance<DelayTrigger>(sp, delay),
+                sp => new DelayTrigger(
+                    delay,
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<DelayTrigger>>(),
+                    runOnStartup),
                 builder,
                 static mw => mw
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                    .UseScope());
         }
 
         public static IServiceCollection AddDelayWorker<TWorker>(
             this IServiceCollection services,
             TimeSpan delay,
+            bool runOnStartup = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
         {
             return services.AddDelayWorker(
                 delay,
-                builder => builder.AddWorker<TWorker>(workerLifetime, middleware));
+                builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
+                runOnStartup);
         }
 
         public static IServiceCollection AddScheduledWorker(
             this IServiceCollection services,
             string schedule,
-            WorkerPipelineBuilderDelegate<TimerTrigger, EmptyTriggerContext> builder,
+            WorkerPipelineBuilderDelegate<ScheduledTrigger, EmptyTriggerContext> builder,
             bool runOnStartup = false,
-            CrontabSchedule.ParseOptions? parseOptions = null)
+            bool includeSeconds = false,
+            bool cancelOnOverlap = false)
         {
             services.TryAddSingleton(TimeProvider.System);
 
             var cronTabSchedule = CrontabSchedule.Parse(
                 schedule,
-                parseOptions ?? new CrontabSchedule.ParseOptions
+                new CrontabSchedule.ParseOptions
                 {
-                    IncludingSeconds = false
+                    IncludingSeconds = includeSeconds
                 });
 
             return services.AddWorker(
-                sp => ActivatorUtilities.CreateInstance<TimerTrigger>(sp, cronTabSchedule, runOnStartup),
+                sp => new ScheduledTrigger(
+                    cronTabSchedule,
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<ScheduledTrigger>>(),
+                    runOnStartup,
+                    cancelOnOverlap),
                 builder,
                 static mw => mw
-                    .UseFireAndForget()
-                    .UseScope()
-                    .UseErrorHandling<Exception>(ex => ex is not OperationCanceledException));
+                    .UseScope());
         }
 
         public static IServiceCollection AddScheduledWorker<TWorker>(
             this IServiceCollection services,
             string schedule,
             bool runOnStartup = false,
-            CrontabSchedule.ParseOptions? parseOptions = null,
+            bool includeSeconds = false,
+            bool cancelOnOverlap = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
@@ -72,7 +84,8 @@ namespace WorkR.Triggers.Timers
                 schedule,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
                 runOnStartup,
-                parseOptions);
+                includeSeconds,
+                cancelOnOverlap);
         }
     }
 }

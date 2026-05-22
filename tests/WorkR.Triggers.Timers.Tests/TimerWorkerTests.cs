@@ -19,7 +19,7 @@ namespace WorkR.Triggers.Timers.Tests
                     services.AddLogging(b => b.ClearProviders());
                     services.AddSingleton(log);
                     services.AddScoped<ScopedId>();
-                    services.AddDelayWorker<ScopeCapturingWorker>(TimeSpan.FromMilliseconds(1));
+                    services.AddDelayWorker<ScopeCapturingWorker>(TimeSpan.FromMilliseconds(1), runOnStartup: true);
                 })
                 .Build();
 
@@ -75,7 +75,7 @@ namespace WorkR.Triggers.Timers.Tests
 
         private sealed class ScopeCapturingWorker(ScopedId scopedId, ScopeLog log) : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct)
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken)
             {
                 log.Add(scopedId.Value);
                 return Task.CompletedTask;
@@ -86,7 +86,7 @@ namespace WorkR.Triggers.Timers.Tests
 
         private sealed class SignalWorker(CallSignal signal) : IWorker<EmptyTriggerContext>
         {
-            public Task Execute(EmptyTriggerContext context, CancellationToken ct)
+            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken)
             {
                 signal.OnSignal();
                 return Task.CompletedTask;

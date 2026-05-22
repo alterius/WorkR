@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace WorkR.Triggers.Timers
 {
@@ -7,8 +7,13 @@ namespace WorkR.Triggers.Timers
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _delay;
         private readonly ILogger _logger;
+        private readonly bool _runOnStartup;
 
-        public DelayTrigger(TimeProvider timeProvider, TimeSpan delay, ILogger<DelayTrigger> logger)
+        public DelayTrigger(
+            TimeSpan delay,
+            TimeProvider timeProvider,
+            ILogger<DelayTrigger> logger,
+            bool runOnStartup = false)
         {
             ArgumentNullException.ThrowIfNull(timeProvider);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(delay.Ticks, nameof(delay));
@@ -17,14 +22,20 @@ namespace WorkR.Triggers.Timers
             _timeProvider = timeProvider;
             _delay = delay;
             _logger = logger;
+            _runOnStartup = runOnStartup;
         }
 
-        public async Task Execute(WorkerDelegate<EmptyTriggerContext> next, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Delay trigger initialised with delay: {delay}", _delay);
+            _logger.LogInformation("Delay trigger initialised with delay: {delay} and runOnStartup {runOnStartup}", _delay, _runOnStartup);
 
             try
             {
+                if (!_runOnStartup)
+                {
+                    await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
+                }
+
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
@@ -37,16 +48,27 @@ namespace WorkR.Triggers.Timers
 
                     _logger.LogDebug("Delay trigger executing...");
 
-                    await next(context, stoppingToken).ConfigureAwait(false);
-
-                    _logger.LogDebug("Delay trigger executed");
+                    try
+                    {
+                        await workerPipeline(context, stoppingToken).ConfigureAwait(false);
+                        _logger.LogDebug("Delay trigger executed");
+                    }
+                    catch (OperationCanceledException)
+                        when (stoppingToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
+                    }
 
                     await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);
                 }
             }
             finally
             {
-                _logger.LogInformation("Delay trigger exited");
+                _logger.LogInformation("Delay trigger stopped");
             }
         }
     }

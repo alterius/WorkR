@@ -2,6 +2,6 @@
 {
     internal interface IPipelineMiddleware
     {
-        Task Execute(IServiceProvider sp, PipelineMiddlewareDelegate next, CancellationToken ct);
+        Task ExecuteAsync(IServiceProvider sp, PipelineMiddlewareDelegate next, CancellationToken cancellationToken);
     }
 }

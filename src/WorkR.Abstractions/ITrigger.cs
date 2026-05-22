@@ -3,6 +3,6 @@
     public interface ITrigger<out TContext>
         where TContext : TriggerContext
     {
-        Task Execute(WorkerDelegate<TContext> next, CancellationToken stoppingToken);
+        Task ExecuteAsync(WorkerDelegate<TContext> workerPipeline, CancellationToken stoppingToken);
     }
 }
