@@ -28,4 +28,8 @@
     <InternalsVisibleTo Include="WorkR.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>
