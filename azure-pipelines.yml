@@ -21,8 +21,8 @@ stages:
   - stage: build
     displayName: Build v$(Build.BuildNumber)
     jobs:
-      - job: buildandpack
-        displayName: Build and Pack
+      - job: build
+        displayName: Build
         steps:
           - checkout: self
             fetchDepth: 0
@@ -92,4 +92,49 @@ stages:
             inputs:
               pathToPublish: $(Build.ArtifactStagingDirectory)
               artifactName: nuget-packages
-    
+
+  - stage: publish_preview
+    displayName: Publish Preview v$(Build.BuildNumber)-preview
+    dependsOn: build
+    condition: succeeded('build')
+    jobs:
+      - deployment: publish_preview
+        displayName: Publish Preview
+        environment: nuget-preview
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: nuget-packages
+
+                - task: DotNetCoreCLI@2
+                  displayName: Push to NuGet.org
+                  inputs:
+                    command: push
+                    packagesToPush: $(Pipeline.Workspace)/nuget-packages/*-preview.nupkg
+                    nuGetFeedType: external
+                    publishFeedCredentials: NuGet.org
+
+  - stage: publish_release
+    displayName: Publish Release v$(Build.BuildNumber)
+    dependsOn: build
+    condition: and(succeeded('build'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    jobs:
+      - deployment: publish_release
+        displayName: Publish Release
+        environment: nuget-release
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: nuget-packages
+
+                - task: DotNetCoreCLI@2
+                  displayName: Push to NuGet.org
+                  inputs:
+                    command: push
+                    packagesToPush: $(Pipeline.Workspace)/nuget-packages/!(*.symbols).nupkg
+                    nuGetFeedType: external
+                    publishFeedCredentials: NuGet.org
