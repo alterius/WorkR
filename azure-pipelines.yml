@@ -71,6 +71,7 @@ stages:
               configuration: Release
               versioningScheme: byEnvVar
               versionEnvVar: BUILD_VERSION_PREVIEW
+              packDirectory: $(Build.ArtifactStagingDirectory)/preview
             env:
               BUILD_VERSION_PREVIEW: $(Build.BuildNumber)-preview
 
@@ -83,6 +84,7 @@ stages:
               configuration: Release
               versioningScheme: byEnvVar
               versionEnvVar: BUILD_VERSION_RELEASE
+              packDirectory: $(Build.ArtifactStagingDirectory)/release
             condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
             env:
               BUILD_VERSION_RELEASE: $(Build.BuildNumber)
@@ -108,7 +110,7 @@ stages:
                 - download: current
                   artifact: nuget-packages
 
-                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/*-preview.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
+                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/preview/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
                   displayName: Push to NuGet.org
 
   - stage: publish_release
@@ -126,5 +128,13 @@ stages:
                 - download: current
                   artifact: nuget-packages
 
-                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/!(*.symbols|*-preview).nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
+                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/release/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
                   displayName: Push to NuGet.org
+
+                - script: |
+                    curl -X POST \
+                      -H "Authorization: Bearer $(System.AccessToken)" \
+                      -H "Content-Type: application/json" \
+                      -d '[{"daysValid": 730, "definitionId": $(System.DefinitionId), "ownerId": "User:$(Build.RequestedForId)", "protectPipeline": true, "runId": $(Build.BuildId)}]' \
+                      "$(System.CollectionUri)$(System.TeamProject)/_apis/build/retention/leases?api-version=7.1"
+                  displayName: Retain pipeline run
