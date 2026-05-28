@@ -110,7 +110,7 @@ stages:
               steps:
                 - download: current
                   artifact: nuget-packages
-                  patterns: 'preview/**'
+                  patterns: 'nuget-packages/preview/**'
 
                 - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/preview/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
                   displayName: Push to NuGet.org
@@ -129,7 +129,7 @@ stages:
               steps:
                 - download: current
                   artifact: nuget-packages
-                  patterns: 'release/**'
+                  patterns: 'nuget-packages/release/**'
 
                 - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/release/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
                   displayName: Push to NuGet.org
