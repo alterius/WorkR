@@ -20,6 +20,7 @@ name: $(major).$(minor).$(Rev:r)
 stages:
   - stage: build
     displayName: Build
+    condition: eq(variables['System.StageAttempt'], '1')
     jobs:
       - job: build
         displayName: Build
