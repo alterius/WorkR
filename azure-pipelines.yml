@@ -1,0 +1,143 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pr:
+  branches:
+    include:
+      - '*'
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  major: 0
+  minor: 3
+
+name: $(major).$(minor).$(Rev:r)
+
+stages:
+  - stage: build
+    displayName: Build
+    condition: eq(variables['System.StageAttempt'], '1')
+    jobs:
+      - job: build
+        displayName: Build
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: UseDotNet@2
+            displayName: Setup .NET 8
+            inputs:
+              version: 8.x
+
+          - task: UseDotNet@2
+            displayName: Setup .NET 9
+            inputs:
+              version: 9.x
+
+          - task: UseDotNet@2
+            displayName: Setup .NET 10
+            inputs:
+              version: 10.x
+
+          - task: DotNetCoreCLI@2
+            displayName: Restore
+            inputs:
+              command: restore
+              projects: WorkR.slnx
+
+          - task: DotNetCoreCLI@2
+            displayName: Build
+            inputs:
+              command: build
+              projects: WorkR.slnx
+              arguments: --no-restore --configuration Release /p:Version=$(Build.BuildNumber)
+
+          - task: DotNetCoreCLI@2
+            displayName: Test
+            inputs:
+              command: test
+              projects: WorkR.slnx
+              arguments: --no-build --configuration Release --collect "Code coverage"
+
+          - task: DotNetCoreCLI@2
+            displayName: Pack (preview)
+            inputs:
+              command: pack
+              packagesToPack: WorkR.slnx
+              nobuild: true
+              configuration: Release
+              versioningScheme: byEnvVar
+              versionEnvVar: BUILD_VERSION_PREVIEW
+              packDirectory: $(Build.ArtifactStagingDirectory)/preview
+            env:
+              BUILD_VERSION_PREVIEW: $(Build.BuildNumber)-preview
+
+          - task: DotNetCoreCLI@2
+            displayName: Pack (release)
+            inputs:
+              command: pack
+              packagesToPack: WorkR.slnx
+              nobuild: true
+              configuration: Release
+              versioningScheme: byEnvVar
+              versionEnvVar: BUILD_VERSION_RELEASE
+              packDirectory: $(Build.ArtifactStagingDirectory)/release
+            condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+            env:
+              BUILD_VERSION_RELEASE: $(Build.BuildNumber)
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish artifacts
+            inputs:
+              pathToPublish: $(Build.ArtifactStagingDirectory)
+              artifactName: nuget-packages
+
+  - stage: publish_preview
+    displayName: Publish Preview
+    dependsOn: build
+    condition: succeeded('build')
+    jobs:
+      - deployment: publish_preview
+        displayName: Publish Preview
+        environment: nuget-preview
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: nuget-packages
+                  patterns: 'nuget-packages/preview/**'
+
+                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/preview/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
+                  displayName: Push to NuGet.org
+
+  - stage: publish_release
+    displayName: Publish Release
+    dependsOn: build
+    condition: and(succeeded('build'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    jobs:
+      - deployment: publish_release
+        displayName: Publish Release
+        environment: nuget-release
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: nuget-packages
+                  patterns: 'nuget-packages/release/**'
+
+                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/release/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
+                  displayName: Push to NuGet.org
+
+                - script: |
+                    curl -X POST \
+                      -H "Authorization: Bearer $(System.AccessToken)" \
+                      -H "Content-Type: application/json" \
+                      -d '[{"daysValid": 730, "definitionId": $(System.DefinitionId), "ownerId": "User:$(Build.RequestedForId)", "protectPipeline": true, "runId": $(Build.BuildId)}]' \
+                      "$(System.CollectionUri)$(System.TeamProject)/_apis/build/retention/leases?api-version=7.1"
+                  displayName: Retain pipeline run
