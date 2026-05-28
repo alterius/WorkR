@@ -19,7 +19,7 @@ name: $(major).$(minor).$(Rev:r)
 
 stages:
   - stage: build
-    displayName: Build v$(Build.BuildNumber)
+    displayName: Build
     jobs:
       - job: build
         displayName: Build
@@ -94,7 +94,7 @@ stages:
               artifactName: nuget-packages
 
   - stage: publish_preview
-    displayName: Publish Preview v$(Build.BuildNumber)-preview
+    displayName: Publish Preview
     dependsOn: build
     condition: succeeded('build')
     jobs:
@@ -108,16 +108,11 @@ stages:
                 - download: current
                   artifact: nuget-packages
 
-                - task: DotNetCoreCLI@2
+                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/*-preview.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
                   displayName: Push to NuGet.org
-                  inputs:
-                    command: push
-                    packagesToPush: $(Pipeline.Workspace)/nuget-packages/*-preview.nupkg
-                    nuGetFeedType: external
-                    publishFeedCredentials: NuGet.org
 
   - stage: publish_release
-    displayName: Publish Release v$(Build.BuildNumber)
+    displayName: Publish Release
     dependsOn: build
     condition: and(succeeded('build'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     jobs:
@@ -131,10 +126,5 @@ stages:
                 - download: current
                   artifact: nuget-packages
 
-                - task: DotNetCoreCLI@2
+                - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/!(*.symbols|*-preview).nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
                   displayName: Push to NuGet.org
-                  inputs:
-                    command: push
-                    packagesToPush: $(Pipeline.Workspace)/nuget-packages/!(*.symbols).nupkg
-                    nuGetFeedType: external
-                    publishFeedCredentials: NuGet.org
