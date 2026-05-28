@@ -11,7 +11,6 @@
     <File Path="Directory.Build.targets" />
     <File Path="LICENSE.txt" />
     <File Path="README.md" />
-    <File Path="version.json" />
   </Folder>
   <Project Path="src/WorkR.Abstractions/WorkR.Abstractions.csproj" />
   <Project Path="src/WorkR.Triggers.AzureServiceBus/WorkR.Triggers.AzureServiceBus.csproj" Id="ca2fa1f5-796f-4249-a149-9dafa48b19af" />
