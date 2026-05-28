@@ -1,0 +1,95 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pr:
+  branches:
+    include:
+      - '*'
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  major: 0
+  minor: 0
+
+name: $(major).$(minor).$(Rev:r)
+
+stages:
+  - stage: build
+    displayName: Build v$(Build.BuildNumber)
+    jobs:
+      - job: buildandpack
+        displayName: Build and Pack
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: UseDotNet@2
+            displayName: Setup .NET 8
+            inputs:
+              version: 8.x
+
+          - task: UseDotNet@2
+            displayName: Setup .NET 9
+            inputs:
+              version: 9.x
+
+          - task: UseDotNet@2
+            displayName: Setup .NET 10
+            inputs:
+              version: 10.x
+
+          - task: DotNetCoreCLI@2
+            displayName: Restore
+            inputs:
+              command: restore
+              projects: WorkR.slnx
+
+          - task: DotNetCoreCLI@2
+            displayName: Build
+            inputs:
+              command: build
+              projects: WorkR.slnx
+              arguments: --no-restore --configuration Release /p:Version=$(Build.BuildNumber)
+
+          - task: DotNetCoreCLI@2
+            displayName: Test
+            inputs:
+              command: test
+              projects: WorkR.slnx
+              arguments: --no-build --configuration Release --collect "Code coverage"
+
+          - task: DotNetCoreCLI@2
+            displayName: Pack (preview)
+            inputs:
+              command: pack
+              packagesToPack: WorkR.slnx
+              nobuild: true
+              configuration: Release
+              versioningScheme: byEnvVar
+              versionEnvVar: BUILD_VERSION_PREVIEW
+            env:
+              BUILD_VERSION_PREVIEW: $(Build.BuildNumber)-preview
+
+          - task: DotNetCoreCLI@2
+            displayName: Pack (release)
+            inputs:
+              command: pack
+              packagesToPack: WorkR.slnx
+              nobuild: true
+              configuration: Release
+              versioningScheme: byEnvVar
+              versionEnvVar: BUILD_VERSION_RELEASE
+            condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+            env:
+              BUILD_VERSION_RELEASE: $(Build.BuildNumber)
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish artifacts
+            inputs:
+              pathToPublish: $(Build.ArtifactStagingDirectory)
+              artifactName: nuget-packages
+    
