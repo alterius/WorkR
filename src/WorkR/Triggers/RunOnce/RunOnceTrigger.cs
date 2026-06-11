@@ -25,9 +25,9 @@ namespace WorkR.Triggers.RunOnce
             var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
 
             using var _ = _logger.BeginScope(
-                new
+                new Dictionary<string, object?>
                 {
-                    context.ExecutionId
+                    ["ExecutionId"] = context.ExecutionId
                 });
 
             try

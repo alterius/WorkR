@@ -33,10 +33,10 @@ namespace WorkR
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             using var _ = _logger.BeginScope(
-                new
+                new Dictionary<string, object?>
                 {
-                    WorkerInstanceId = _workerInstanceId,
-                    Trigger = typeof(TTrigger).Name
+                    ["WorkerInstanceId"] = _workerInstanceId,
+                    ["Trigger"] = typeof(TTrigger).Name
                 });
 
             _logger.LogInformation("Worker starting...");
