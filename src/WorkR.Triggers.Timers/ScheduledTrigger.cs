@@ -41,7 +41,7 @@ namespace WorkR.Triggers.Timers
             {
                 var context = new EmptyTriggerContext(timestamp);
 
-                using var _ = _logger.BeginScope(new { context.ExecutionId });
+                using var _ = _logger.BeginScope(new Dictionary<string, object?> { ["ExecutionId"] = context.ExecutionId });
 
                 _logger.LogDebug("Scheduled trigger executing...");
 

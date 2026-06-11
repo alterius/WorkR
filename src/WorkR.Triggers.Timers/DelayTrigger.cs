@@ -41,9 +41,9 @@ namespace WorkR.Triggers.Timers
                     var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
 
                     using var _ = _logger.BeginScope(
-                        new
+                        new Dictionary<string, object?>
                         {
-                            context.ExecutionId
+                            ["ExecutionId"] = context.ExecutionId
                         });
 
                     _logger.LogDebug("Delay trigger executing...");
