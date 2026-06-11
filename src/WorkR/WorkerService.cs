@@ -64,6 +64,7 @@ namespace WorkR
         {
             var spanName = CleanTypeName(typeof(TContext).Name);
             var triggerName = CleanTypeName(typeof(TTrigger).Name);
+            var triggerVersion = typeof(TTrigger).Assembly.GetName().Version?.ToString();
 
             return async (context, cancellationToken) =>
             {
@@ -74,6 +75,7 @@ namespace WorkR
                 activity?.SetTag("workr.service.id", _workerServiceId);
                 activity?.SetTag("workr.execution.id", context.ExecutionId);
                 activity?.SetTag("workr.trigger", triggerName);
+                activity?.SetTag("workr.trigger.version", triggerVersion);
 
                 using var _ = _logger.BeginScope(
                     new Dictionary<string, object?>
@@ -93,22 +95,25 @@ namespace WorkR
                 }
                 catch (Exception ex)
                 {
-                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-#if NET9_0_OR_GREATER
-                    activity?.AddException(ex);
-#else
-                    activity?.AddEvent(new ActivityEvent(
-                        "exception",
-                        tags: new ActivityTagsCollection
-                        {
-                            ["exception.type"] = ex.GetType().ToString(),
-                            ["exception.message"] = ex.Message,
-                            ["exception.stacktrace"] = ex.ToString()
-                        }));
-#endif
-
+                    // Cancellation of the execution token isn't a failure;
+                    // leave the span unset and skip the error log
                     if (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
+                        activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                        activity?.SetTag("error.type", ex.GetType().FullName);
+#if NET9_0_OR_GREATER
+                        activity?.AddException(ex);
+#else
+                        activity?.AddEvent(new ActivityEvent(
+                            "exception",
+                            tags: new ActivityTagsCollection
+                            {
+                                ["exception.type"] = ex.GetType().ToString(),
+                                ["exception.message"] = ex.Message,
+                                ["exception.stacktrace"] = ex.ToString()
+                            }));
+#endif
+
                         _logger.LogError(ex, "Worker pipeline execution failed");
                     }
 

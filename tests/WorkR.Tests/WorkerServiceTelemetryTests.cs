@@ -32,6 +32,7 @@ namespace WorkR.Tests
             mine[0].GetTagItem("workr.execution.id").ShouldBe(first.ExecutionId);
             mine[1].GetTagItem("workr.execution.id").ShouldBe(second.ExecutionId);
             mine.Select(a => a.GetTagItem("workr.service.id")).Distinct().ShouldHaveSingleItem().ShouldBeOfType<Guid>();
+            mine.ShouldAllBe(a => Equals(a.GetTagItem("workr.trigger.version"), typeof(FakeTrigger).Assembly.GetName().Version!.ToString()));
             mine.ShouldAllBe(a => a.Source.Version == typeof(WorkerService<,>).Assembly.GetName().Version!.ToString());
         }
 
@@ -90,7 +91,45 @@ namespace WorkR.Tests
                 .ShouldHaveSingleItem();
             activity.Status.ShouldBe(ActivityStatusCode.Error);
             activity.StatusDescription.ShouldBe("boom");
+            activity.GetTagItem("error.type").ShouldBe(typeof(InvalidOperationException).FullName);
             activity.Events.ShouldContain(e => e.Name == "exception");
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_WhenExecutionCancelled_DoesNotMarkActivityAsError()
+        {
+            var activities = new List<Activity>();
+            using var listener = CreateListener(activities);
+
+            var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
+            using var executionCts = new CancellationTokenSource();
+            var service = Create(
+                new FakeTrigger(async (next, _) =>
+                {
+                    try
+                    {
+                        await next(context, executionCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                }),
+                pipeline: new WorkerPipeline<EmptyTriggerContext>((_, _, ct) =>
+                {
+                    executionCts.Cancel();
+                    ct.ThrowIfCancellationRequested();
+                    return Task.CompletedTask;
+                }));
+
+            await service.StartAsync(TestContext.Current.CancellationToken);
+            await service.ExecuteTask!;
+
+            var activity = activities
+                .Where(a => Equals(a.GetTagItem("workr.execution.id"), context.ExecutionId))
+                .ShouldHaveSingleItem();
+            activity.Status.ShouldBe(ActivityStatusCode.Unset);
+            activity.GetTagItem("error.type").ShouldBeNull();
+            activity.Events.ShouldNotContain(e => e.Name == "exception");
         }
 
         [Fact]
