@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using System.Diagnostics;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace WorkR
@@ -41,7 +42,7 @@ namespace WorkR
 
             _logger.LogInformation("Worker starting...");
 
-            var pipeline = _workerPipeline.Build(_serviceProvider);
+            var pipeline = WithTracing(_workerPipeline.Build(_serviceProvider));
 
             _logger.LogInformation("Worker started");
 
@@ -56,6 +57,50 @@ namespace WorkR
             }
 
             _logger.LogInformation("Worker stopped");
+        }
+
+        private static WorkerDelegate<TContext> WithTracing(WorkerDelegate<TContext> pipeline)
+        {
+            var spanName = CleanTypeName(typeof(TContext).Name);
+            var triggerName = CleanTypeName(typeof(TTrigger).Name);
+
+            return async (context, cancellationToken) =>
+            {
+                // No explicit parent: picks up Activity.Current ambiently
+                // (e.g. a messaging SDK's process span) or becomes a trace root.
+                using var activity = WorkRDiagnostics.Source.StartActivity(spanName);
+
+                activity?.SetTag("workr.execution.id", context.ExecutionId);
+                activity?.SetTag("workr.trigger", triggerName);
+
+                try
+                {
+                    await pipeline(context, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+#if NET9_0_OR_GREATER
+                    activity?.AddException(ex);
+#else
+                    activity?.AddEvent(new ActivityEvent(
+                        "exception",
+                        tags: new ActivityTagsCollection
+                        {
+                            ["exception.type"] = ex.GetType().ToString(),
+                            ["exception.message"] = ex.Message,
+                            ["exception.stacktrace"] = ex.ToString()
+                        }));
+#endif
+                    throw;
+                }
+            };
+        }
+
+        private static string CleanTypeName(string name)
+        {
+            var backtick = name.IndexOf('`');
+            return backtick < 0 ? name : name[..backtick];
         }
     }
 }

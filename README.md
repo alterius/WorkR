@@ -82,6 +82,27 @@ builder.Services.AddScheduledWorker<MyWorker>("*/5 * * * *");
 
 ---
 
+## Tracing
+
+WorkR emits one OpenTelemetry-compatible span per worker pipeline execution from an
+`ActivitySource` named `"WorkR"`, regardless of trigger type. Enable it by adding the
+source to your OpenTelemetry `TracerProviderBuilder`:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing.AddSource("WorkR"));
+```
+
+Spans are named after the trigger context type and tagged with `workr.execution.id`
+and `workr.trigger`. When a span is already active (e.g. a messaging SDK's process
+span), the WorkR span becomes its child; otherwise it starts a new trace. Failed
+executions are marked with an error status and the exception is recorded. When no
+listener is subscribed, tracing has no overhead.
+
+The source name `"WorkR"` is a stable public contract.
+
+---
+
 ## Packages
 
 | Package | Description |
