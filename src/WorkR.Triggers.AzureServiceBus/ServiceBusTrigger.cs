@@ -54,16 +54,11 @@ namespace WorkR.Triggers.AzureServiceBus
 
                 using var _ = _logger.BeginScope(new Dictionary<string, object?>
                 {
-                    ["ExecutionId"] = executionId,
                     ["MessageId"] = args.Message.MessageId,
                 });
 
-                _logger.LogDebug("Service bus trigger executing...");
-
                 var context = await _contextFactory(executionId, args).ConfigureAwait(false);
                 await workerPipeline(context, args.CancellationToken).ConfigureAwait(false);
-
-                _logger.LogDebug("Service bus trigger executed");
             };
 
             _serviceBusProcessor.ProcessErrorAsync += args =>

@@ -1,11 +1,12 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Shouldly;
 
 namespace WorkR.Tests
 {
     [Trait("Category", "L0")]
-    public class WorkerServiceTracingTests
+    public class WorkerServiceTelemetryTests
     {
         [Fact]
         public async Task ExecuteAsync_WhenListenerSubscribed_CreatesActivityPerExecution()
@@ -112,6 +113,88 @@ namespace WorkR.Tests
             observed.ShouldBeNull();
         }
 
+        [Fact]
+        public async Task ExecuteAsync_LogsWorkerExecutingAndExecuted_WithExecutionIdScope()
+        {
+            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
+            var service = Create(new FakeTrigger((next, ct) => next(context, ct)), logger: logger);
+
+            await service.StartAsync(TestContext.Current.CancellationToken);
+            await service.ExecuteTask!;
+
+            var snapshot = logger.Collector.GetSnapshot();
+
+            var executing = snapshot.Where(log => log.Message == "Worker executing...").ShouldHaveSingleItem();
+            executing.Level.ShouldBe(LogLevel.Debug);
+            executing.Scopes
+                .OfType<IEnumerable<KeyValuePair<string, object?>>>()
+                .SelectMany(scope => scope)
+                .ShouldContain(new KeyValuePair<string, object?>("ExecutionId", context.ExecutionId));
+
+            var executed = snapshot.Where(log => log.Message.StartsWith("Worker executed in")).ShouldHaveSingleItem();
+            executed.Level.ShouldBe(LogLevel.Debug);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_WhenWorkerThrows_LogsError()
+        {
+            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
+            var service = Create(
+                new FakeTrigger(async (next, ct) =>
+                {
+                    try
+                    {
+                        await next(context, ct);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                    }
+                }),
+                pipeline: new WorkerPipeline<EmptyTriggerContext>(
+                    (_, _, _) => throw new InvalidOperationException("boom")),
+                logger: logger);
+
+            await service.StartAsync(TestContext.Current.CancellationToken);
+            await service.ExecuteTask!;
+
+            var error = logger.Collector.GetSnapshot().Where(log => log.Level == LogLevel.Error).ShouldHaveSingleItem();
+            error.Message.ShouldBe("Worker execution failed");
+            error.Exception.ShouldBeOfType<InvalidOperationException>();
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_WhenExecutionCancelled_DoesNotLogError()
+        {
+            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
+            using var executionCts = new CancellationTokenSource();
+            var service = Create(
+                new FakeTrigger(async (next, _) =>
+                {
+                    try
+                    {
+                        await next(context, executionCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                }),
+                pipeline: new WorkerPipeline<EmptyTriggerContext>((_, _, ct) =>
+                {
+                    executionCts.Cancel();
+                    ct.ThrowIfCancellationRequested();
+                    return Task.CompletedTask;
+                }),
+                logger: logger);
+
+            await service.StartAsync(TestContext.Current.CancellationToken);
+            await service.ExecuteTask!;
+
+            logger.Collector.GetSnapshot().ShouldNotContain(log => log.Level == LogLevel.Error);
+        }
+
         private static ActivityListener CreateListener(List<Activity> activities)
         {
             var listener = new ActivityListener
@@ -129,11 +212,12 @@ namespace WorkR.Tests
 
         private static WorkerService<FakeTrigger, EmptyTriggerContext> Create(
             FakeTrigger? trigger = null,
-            WorkerPipeline<EmptyTriggerContext>? pipeline = null) =>
+            WorkerPipeline<EmptyTriggerContext>? pipeline = null,
+            FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>? logger = null) =>
             new(EmptyServiceProvider.Instance,
                 trigger ?? new FakeTrigger(),
                 pipeline ?? new WorkerPipeline<EmptyTriggerContext>((_, _, _) => Task.CompletedTask),
-                new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>());
+                logger ?? new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>());
 
         private sealed class EmptyServiceProvider : IServiceProvider
         {

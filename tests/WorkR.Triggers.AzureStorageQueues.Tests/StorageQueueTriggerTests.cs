@@ -486,29 +486,64 @@ public class StorageQueueTriggerTests
     }
 
     [Fact]
-    public async Task WhenNextThrows_LogsError()
+    public async Task WhenNextThrows_DoesNotLogError()
     {
+        // Worker failures are logged by WorkerService, not the trigger
         var (serviceClient, queueClient) = SubClients();
         var firstResponse = MessagesResponse(MakeMessage());
         var emptyResponse = EmptyResponse();
         queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
             .Returns(firstResponse, emptyResponse);
-        var logged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var workerThrew = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var logger = new FakeLogger<StorageQueueTrigger>();
         using var cts = new CancellationTokenSource();
         var trigger = new StorageQueueTrigger(serviceClient, QueueName, DefaultOptions, new FakeTimeProvider(StartTime), logger);
 
         var executeTask = trigger.ExecuteAsync((_, _) =>
         {
-            logged.TrySetResult();
+            workerThrew.TrySetResult();
             throw new InvalidOperationException("boom");
         }, cts.Token);
 
-        await logged.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await workerThrew.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
-        logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
+        logger.Collector.GetSnapshot().ShouldNotContain(log => log.Level == LogLevel.Error);
+    }
+
+    [Fact]
+    public async Task WhenDeserializerThrows_LogsError()
+    {
+        // A message that can't produce a context is a trigger problem
+        var (serviceClient, queueClient) = SubClients();
+        var firstResponse = MessagesResponse(MakeMessage());
+        var emptyResponse = EmptyResponse();
+        queueClient.ReceiveMessagesAsync(Arg.Any<int?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns(firstResponse, emptyResponse);
+        var deserializerThrew = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var logger = new FakeLogger<StorageQueueTrigger<string>>();
+        using var cts = new CancellationTokenSource();
+        var trigger = new StorageQueueTrigger<string>(
+            serviceClient,
+            QueueName,
+            DefaultOptions,
+            _ =>
+            {
+                deserializerThrew.TrySetResult();
+                throw new FormatException("bad payload");
+            },
+            new FakeTimeProvider(StartTime),
+            logger);
+
+        var executeTask = trigger.ExecuteAsync((_, _) => Task.CompletedTask, cts.Token);
+
+        await deserializerThrew.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
+
+        logger.Collector.GetSnapshot().ShouldContain(log =>
+            log.Level == LogLevel.Error && log.Exception is FormatException);
     }
 
     [Fact]

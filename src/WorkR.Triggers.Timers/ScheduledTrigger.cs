@@ -41,14 +41,9 @@ namespace WorkR.Triggers.Timers
             {
                 var context = new EmptyTriggerContext(timestamp);
 
-                using var _ = _logger.BeginScope(new Dictionary<string, object?> { ["ExecutionId"] = context.ExecutionId });
-
-                _logger.LogDebug("Scheduled trigger executing...");
-
                 try
                 {
                     await workerPipeline(context, executionToken).ConfigureAwait(false);
-                    _logger.LogDebug("Scheduled trigger executed");
                 }
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)
@@ -60,9 +55,9 @@ namespace WorkR.Triggers.Timers
                 {
                     _logger.LogWarning("Scheduled trigger execution cancelled due to overlap");
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
+                    // Logged by WorkerService; swallow so the schedule keeps running
                 }
                 finally
                 {

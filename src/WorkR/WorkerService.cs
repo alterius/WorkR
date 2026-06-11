@@ -42,7 +42,7 @@ namespace WorkR
 
             _logger.LogInformation("Worker starting...");
 
-            var pipeline = WithTracing(_workerPipeline.Build(_serviceProvider));
+            var pipeline = WithTelemetry(_workerPipeline.Build(_serviceProvider));
 
             _logger.LogInformation("Worker started");
 
@@ -59,7 +59,7 @@ namespace WorkR
             _logger.LogInformation("Worker stopped");
         }
 
-        private static WorkerDelegate<TContext> WithTracing(WorkerDelegate<TContext> pipeline)
+        private WorkerDelegate<TContext> WithTelemetry(WorkerDelegate<TContext> pipeline)
         {
             var spanName = CleanTypeName(typeof(TContext).Name);
             var triggerName = CleanTypeName(typeof(TTrigger).Name);
@@ -73,9 +73,21 @@ namespace WorkR
                 activity?.SetTag("workr.execution.id", context.ExecutionId);
                 activity?.SetTag("workr.trigger", triggerName);
 
+                using var _ = _logger.BeginScope(
+                    new Dictionary<string, object?>
+                    {
+                        ["ExecutionId"] = context.ExecutionId
+                    });
+
+                _logger.LogDebug("Worker executing...");
+
+                var startedAt = Stopwatch.GetTimestamp();
+
                 try
                 {
                     await pipeline(context, cancellationToken).ConfigureAwait(false);
+
+                    _logger.LogDebug("Worker executed in {elapsed}", Stopwatch.GetElapsedTime(startedAt));
                 }
                 catch (Exception ex)
                 {
@@ -92,6 +104,12 @@ namespace WorkR
                             ["exception.stacktrace"] = ex.ToString()
                         }));
 #endif
+
+                    if (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogError(ex, "Worker execution failed");
+                    }
+
                     throw;
                 }
             };

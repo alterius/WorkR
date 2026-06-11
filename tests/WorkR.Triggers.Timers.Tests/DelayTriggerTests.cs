@@ -243,25 +243,26 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task ExecuteAsync_WhenWorkerPipelineThrows_LogsError()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrows_DoesNotLogError()
         {
+            // Worker failures are logged by WorkerService, not the trigger
             var timeProvider = new FakeTimeProvider();
             var logger = new FakeLogger<DelayTrigger>();
-            var logged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var workerThrew = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
             var trigger = new DelayTrigger(TimeSpan.FromSeconds(60), timeProvider, logger, runOnStartup: true);
 
             var executeTask = trigger.ExecuteAsync((_, _) =>
             {
-                logged.TrySetResult();
+                workerThrew.TrySetResult();
                 throw new InvalidOperationException("boom");
             }, cts.Token);
 
-            await logged.Task.WaitAsync(TestContext.Current.CancellationToken);
+            await workerThrew.Task.WaitAsync(TestContext.Current.CancellationToken);
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
-            logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
+            logger.Collector.GetSnapshot().ShouldNotContain(log => log.Level == LogLevel.Error);
         }
 
         [Fact]
