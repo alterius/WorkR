@@ -93,29 +93,29 @@ namespace WorkR
 
                     _logger.LogDebug("Worker pipeline executed in {elapsed}", Stopwatch.GetElapsedTime(startedAt));
                 }
+                catch (OperationCanceledException)
+                    when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    // Cancellation of the execution token isn't a failure;
-                    // leave the span unset and skip the error log
-                    if (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-                    {
-                        activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                        activity?.SetTag("error.type", ex.GetType().FullName);
+                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    activity?.SetTag("error.type", ex.GetType().FullName);
 #if NET9_0_OR_GREATER
-                        activity?.AddException(ex);
+                    activity?.AddException(ex);
 #else
-                        activity?.AddEvent(new ActivityEvent(
-                            "exception",
-                            tags: new ActivityTagsCollection
-                            {
-                                ["exception.type"] = ex.GetType().ToString(),
-                                ["exception.message"] = ex.Message,
-                                ["exception.stacktrace"] = ex.ToString()
-                            }));
+                    activity?.AddEvent(new ActivityEvent(
+                        "exception",
+                        tags: new ActivityTagsCollection
+                        {
+                            ["exception.type"] = ex.GetType().ToString(),
+                            ["exception.message"] = ex.Message,
+                            ["exception.stacktrace"] = ex.ToString()
+                        }));
 #endif
 
-                        _logger.LogError(ex, "Worker pipeline execution failed");
-                    }
+                    _logger.LogError(ex, "Worker pipeline execution failed");
 
                     throw;
                 }
