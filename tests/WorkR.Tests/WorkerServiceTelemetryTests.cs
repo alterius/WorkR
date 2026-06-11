@@ -125,14 +125,14 @@ namespace WorkR.Tests
 
             var snapshot = logger.Collector.GetSnapshot();
 
-            var executing = snapshot.Where(log => log.Message == "Worker executing...").ShouldHaveSingleItem();
+            var executing = snapshot.Where(log => log.Message == "Worker pipeline executing...").ShouldHaveSingleItem();
             executing.Level.ShouldBe(LogLevel.Debug);
             executing.Scopes
                 .OfType<IEnumerable<KeyValuePair<string, object?>>>()
                 .SelectMany(scope => scope)
                 .ShouldContain(new KeyValuePair<string, object?>("ExecutionId", context.ExecutionId));
 
-            var executed = snapshot.Where(log => log.Message.StartsWith("Worker executed in")).ShouldHaveSingleItem();
+            var executed = snapshot.Where(log => log.Message.StartsWith("Worker pipeline executed in")).ShouldHaveSingleItem();
             executed.Level.ShouldBe(LogLevel.Debug);
         }
 
@@ -160,7 +160,7 @@ namespace WorkR.Tests
             await service.ExecuteTask!;
 
             var error = logger.Collector.GetSnapshot().Where(log => log.Level == LogLevel.Error).ShouldHaveSingleItem();
-            error.Message.ShouldBe("Worker execution failed");
+            error.Message.ShouldBe("Worker pipeline execution failed");
             error.Exception.ShouldBeOfType<InvalidOperationException>();
         }
 

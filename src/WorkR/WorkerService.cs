@@ -8,7 +8,7 @@ namespace WorkR
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {
-        private readonly Guid _workerInstanceId = Guid.NewGuid();
+        private readonly Guid _workerServiceId = Guid.NewGuid();
         private readonly IServiceProvider _serviceProvider;
         private readonly TTrigger _trigger;
         private readonly WorkerPipeline<TContext> _workerPipeline;
@@ -36,15 +36,16 @@ namespace WorkR
             using var _ = _logger.BeginScope(
                 new Dictionary<string, object?>
                 {
-                    ["WorkerInstanceId"] = _workerInstanceId,
-                    ["Trigger"] = typeof(TTrigger).Name
+                    ["WorkerServiceId"] = _workerServiceId,
+                    ["Trigger"] = CleanTypeName(typeof(TTrigger).Name)
                 });
 
-            _logger.LogInformation("Worker starting...");
+            _logger.LogInformation("Worker service starting...");
 
-            var pipeline = WithTelemetry(_workerPipeline.Build(_serviceProvider));
+            var pipeline = WithTelemetry(
+                _workerPipeline.Build(_serviceProvider));
 
-            _logger.LogInformation("Worker started");
+            _logger.LogInformation("Worker service started");
 
             try
             {
@@ -53,10 +54,10 @@ namespace WorkR
             catch (OperationCanceledException)
                 when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Worker shutting down...");
+                _logger.LogInformation("Worker service shutting down...");
             }
 
-            _logger.LogInformation("Worker stopped");
+            _logger.LogInformation("Worker service stopped");
         }
 
         private WorkerDelegate<TContext> WithTelemetry(WorkerDelegate<TContext> pipeline)
@@ -79,7 +80,7 @@ namespace WorkR
                         ["ExecutionId"] = context.ExecutionId
                     });
 
-                _logger.LogDebug("Worker executing...");
+                _logger.LogDebug("Worker pipeline executing...");
 
                 var startedAt = Stopwatch.GetTimestamp();
 
@@ -87,7 +88,7 @@ namespace WorkR
                 {
                     await pipeline(context, cancellationToken).ConfigureAwait(false);
 
-                    _logger.LogDebug("Worker executed in {elapsed}", Stopwatch.GetElapsedTime(startedAt));
+                    _logger.LogDebug("Worker pipeline executed in {elapsed}", Stopwatch.GetElapsedTime(startedAt));
                 }
                 catch (Exception ex)
                 {
@@ -107,7 +108,7 @@ namespace WorkR
 
                     if (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
-                        _logger.LogError(ex, "Worker execution failed");
+                        _logger.LogError(ex, "Worker pipeline execution failed");
                     }
 
                     throw;

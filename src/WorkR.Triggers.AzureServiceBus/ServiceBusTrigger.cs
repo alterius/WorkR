@@ -67,7 +67,10 @@ namespace WorkR.Triggers.AzureServiceBus
                 return Task.CompletedTask;
             };
 
-            using var _ = _logger.BeginScope(new Dictionary<string, object?> { ["EntityPath"] = _serviceBusProcessor.EntityPath });
+            using var _ = _logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["EntityPath"] = _serviceBusProcessor.EntityPath
+            });
 
             _logger.LogInformation("Service bus trigger initialised");
 
