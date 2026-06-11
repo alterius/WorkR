@@ -189,8 +189,6 @@ namespace WorkR.Triggers.AzureStorageQueues
             }
             catch (Exception ex)
             {
-                // A message that can't produce a context is a trigger problem,
-                // not a work execution problem
                 _logger.LogError(ex, "Failed to create trigger context from queue message");
                 throw;
             }
