@@ -71,6 +71,7 @@ namespace WorkR
                 // (e.g. a messaging SDK's process span) or becomes a trace root.
                 using var activity = WorkRDiagnostics.Source.StartActivity(spanName);
 
+                activity?.SetTag("workr.service.id", _workerServiceId);
                 activity?.SetTag("workr.execution.id", context.ExecutionId);
                 activity?.SetTag("workr.trigger", triggerName);
 

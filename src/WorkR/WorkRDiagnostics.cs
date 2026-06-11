@@ -4,6 +4,8 @@ namespace WorkR
 {
     internal static class WorkRDiagnostics
     {
-        internal static readonly ActivitySource Source = new("WorkR");
+        internal static readonly ActivitySource Source = new(
+            "WorkR",
+            typeof(WorkRDiagnostics).Assembly.GetName().Version?.ToString());
     }
 }
