@@ -57,13 +57,34 @@ namespace WorkR.Triggers.AzureServiceBus
                     ["MessageId"] = args.Message.MessageId,
                 });
 
-                var context = await _contextFactory(executionId, args).ConfigureAwait(false);
+                TContext context;
+
+                try
+                {
+                    context = await _contextFactory(executionId, args).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create trigger context from service bus message");
+                    throw;
+                }
+
                 await workerPipeline(context, args.CancellationToken).ConfigureAwait(false);
             };
 
             _serviceBusProcessor.ProcessErrorAsync += args =>
             {
-                _logger.LogError(args.Exception, "Service bus processor failed with unhandled exception");
+                if (args.ErrorSource == ServiceBusErrorSource.ProcessMessageCallback)
+                {
+                    // Worker failures are logged by WorkerService and context creation
+                    // failures by the message handler; avoid logging them twice
+                    _logger.LogDebug(args.Exception, "Service bus processor received error from message handler");
+                }
+                else
+                {
+                    _logger.LogError(args.Exception, "Service bus processor failed with unhandled exception");
+                }
+
                 return Task.CompletedTask;
             };
 
