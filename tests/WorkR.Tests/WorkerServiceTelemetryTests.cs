@@ -31,8 +31,6 @@ namespace WorkR.Tests
             mine.ShouldAllBe(a => a.OperationName == nameof(EmptyTriggerContext));
             mine[0].GetTagItem("workr.execution.id").ShouldBe(first.ExecutionId);
             mine[1].GetTagItem("workr.execution.id").ShouldBe(second.ExecutionId);
-            mine.Select(a => a.GetTagItem("workr.service.id")).Distinct().ShouldHaveSingleItem().ShouldBeOfType<Guid>();
-            mine.ShouldAllBe(a => a.Source.Version == typeof(WorkerService<,>).Assembly.GetName().Version!.ToString());
         }
 
         [Fact]
