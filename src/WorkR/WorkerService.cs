@@ -33,17 +33,29 @@ namespace WorkR
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            var workerVersion = GetType().Assembly.GetName().Version!.ToString();
+            var triggerName = TypeNameHelper.GetTypeDisplayName(typeof(TTrigger), fullName: false);
+            var triggerVersion = typeof(TTrigger).Assembly.GetName().Version?.ToString() ?? "unknown";
+            var pipelineName = string.Join(" -> ", _workerPipeline.WorkerTypes.Select(t => TypeNameHelper.GetTypeDisplayName(t, fullName: false)));
+
             using var _ = _logger.BeginScope(
                 new Dictionary<string, object?>
                 {
+                    ["WorkRVersion"] = workerVersion,
                     ["WorkerServiceId"] = _workerServiceId,
-                    ["Trigger"] = CleanTypeName(typeof(TTrigger).Name)
+                    ["Trigger"] = triggerName,
+                    ["TriggerVersion"] = triggerVersion,
+                    ["WorkerPipeline"] = pipelineName
                 });
 
             _logger.LogInformation("Worker service starting...");
 
             var pipeline = WithTelemetry(
-                _workerPipeline.Build(_serviceProvider));
+                _workerPipeline.Build(_serviceProvider),
+                workerVersion,
+                triggerName,
+                triggerVersion,
+                pipelineName);
 
             _logger.LogInformation("Worker service started");
 
@@ -60,24 +72,27 @@ namespace WorkR
             _logger.LogInformation("Worker service stopped");
         }
 
-        private WorkerDelegate<TContext> WithTelemetry(WorkerDelegate<TContext> pipeline)
+        private WorkerDelegate<TContext> WithTelemetry(
+            WorkerDelegate<TContext> pipeline,
+            string workerVersion,
+            string triggerName,
+            string triggerVersion,
+            string pipelineName)
         {
-            var spanName = CleanTypeName(typeof(TContext).Name);
-            var triggerName = CleanTypeName(typeof(TTrigger).Name);
-            var triggerVersion = typeof(TTrigger).Assembly.GetName().Version?.ToString();
+            var spanName = $"EXECUTE {pipelineName}";
 
             return async (context, cancellationToken) =>
             {
-                // No explicit parent: picks up Activity.Current ambiently
-                // (e.g. a messaging SDK's process span) or becomes a trace root.
-                using var activity = WorkRDiagnostics.Source.StartActivity("Execute", ActivityKind.Internal);
+                using var activity = WorkRDiagnostics.Source.StartActivity(spanName, ActivityKind.Internal);
 
                 if (activity?.IsAllDataRequested ?? false)
                 {
+                    activity.SetTag("workr.version", workerVersion);
                     activity.SetTag("workr.service.id", _workerServiceId);
-                    activity.SetTag("workr.execution.id", context.ExecutionId);
                     activity.SetTag("workr.trigger", triggerName);
                     activity.SetTag("workr.trigger.version", triggerVersion);
+                    activity.SetTag("workr.pipeline", pipelineName);
+                    activity.SetTag("workr.execution.id", context.ExecutionId);
                 }
 
                 using var _ = _logger.BeginScope(
@@ -88,17 +103,17 @@ namespace WorkR
 
                 _logger.LogDebug("Worker pipeline executing...");
 
-                var startedAt = Stopwatch.GetTimestamp();
-
                 try
                 {
                     await pipeline(context, cancellationToken).ConfigureAwait(false);
 
-                    _logger.LogDebug("Worker pipeline executed in {elapsed}", Stopwatch.GetElapsedTime(startedAt));
+                    _logger.LogDebug("Worker pipeline executed");
                 }
                 catch (OperationCanceledException)
                     when (cancellationToken.IsCancellationRequested)
                 {
+                    _logger.LogDebug("Worker pipeline execution cancelled");
+
                     throw;
                 }
                 catch (Exception ex)
@@ -115,12 +130,6 @@ namespace WorkR
                     throw;
                 }
             };
-        }
-
-        private static string CleanTypeName(string name)
-        {
-            var backtick = name.IndexOf('`');
-            return backtick < 0 ? name : name[..backtick];
         }
 
         private static void AddException(Activity activity, Exception ex)

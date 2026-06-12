@@ -12,7 +12,31 @@ namespace WorkR.Tests
         public void WorkerPipelineFinal_Constructor_WhenPipelineIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new WorkerPipeline<string>((WorkerPipelineDelegate<string>)null!));
+                new WorkerPipeline<string>(null!, []));
+        }
+
+        [Fact]
+        public void WorkerPipelineFinal_Constructor_WhenWorkerTypesIsNull_ThrowsArgumentNullException()
+        {
+            Should.Throw<ArgumentNullException>(() =>
+                new WorkerPipeline<string>((_, _, _) => Task.CompletedTask, null!));
+        }
+
+        [Fact]
+        public void WorkerPipelineFinal_Constructor_WhenWorkerTypesIsEmpty_ThrowsArgumentException()
+        {
+            Should.Throw<ArgumentException>(() =>
+                new WorkerPipeline<string>((_, _, _) => Task.CompletedTask, []));
+        }
+
+        [Fact]
+        public void WorkerPipelineFinal_WorkerTypes_ExposesProvidedTypes()
+        {
+            var pipeline = new WorkerPipeline<string>(
+                (_, _, _) => Task.CompletedTask,
+                [typeof(UpperCaseWorker), typeof(CapturingWorker)]);
+
+            pipeline.WorkerTypes.ShouldBe([typeof(UpperCaseWorker), typeof(CapturingWorker)]);
         }
 
         [Fact]
@@ -23,7 +47,7 @@ namespace WorkR.Tests
             {
                 called = true;
                 return Task.CompletedTask;
-            });
+            }, [typeof(CapturingWorker)]);
 
             await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
 
@@ -39,7 +63,7 @@ namespace WorkR.Tests
             {
                 captured = serviceProvider;
                 return Task.CompletedTask;
-            });
+            }, [typeof(CapturingWorker)]);
 
             await pipeline.Build(sp).Invoke("hello", TestContext.Current.CancellationToken);
 
@@ -54,7 +78,7 @@ namespace WorkR.Tests
             {
                 captured = value;
                 return Task.CompletedTask;
-            });
+            }, [typeof(CapturingWorker)]);
 
             await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
 
@@ -67,7 +91,7 @@ namespace WorkR.Tests
         public void WorkerPipelineIntermediate_Constructor_WhenPipelineIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new WorkerPipeline<string, string>((WorkerPipelineDelegate<string, string>)null!));
+                new WorkerPipeline<string, string>(null!, []));
         }
 
         // WorkerPipeline.Create / Then / Finally — pipeline composition
@@ -122,6 +146,16 @@ namespace WorkR.Tests
             await del("world", TestContext.Current.CancellationToken);
 
             sp.GetRequiredService<CapturingWorker>().Captured.ShouldBe("WORLD");
+        }
+
+        [Fact]
+        public void Compose_RecordsWorkerTypesInPipelineOrder()
+        {
+            var pipeline = WorkerPipeline.Create<string>()
+                .Then<UpperCaseWorker, string>()
+                .Finally<CapturingWorker>();
+
+            pipeline.WorkerTypes.ShouldBe([typeof(UpperCaseWorker), typeof(CapturingWorker)]);
         }
 
         [Fact]

@@ -93,11 +93,23 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing.AddSource("WorkR"));
 ```
 
-Spans are named after the trigger context type and tagged with `workr.execution.id`
-and `workr.trigger`. When a span is already active (e.g. a messaging SDK's process
-span), the WorkR span becomes its child; otherwise it starts a new trace. Failed
-executions are marked with an error status and the exception is recorded. When no
-listener is subscribed, tracing has no overhead.
+Spans are named `EXECUTE <pipeline>`, where `<pipeline>` is the worker chain joined
+with ` -> ` (for example `EXECUTE ValidateOrder -> ShipOrder`), and carry the
+following tags:
+
+| Tag | Description |
+| --- | --- |
+| `workr.version` | Version of the WorkR assembly |
+| `workr.service.id` | Stable identifier for the worker service instance |
+| `workr.trigger` | Trigger type name |
+| `workr.trigger.version` | Version of the trigger's assembly |
+| `workr.pipeline` | Worker chain, joined with ` -> ` |
+| `workr.execution.id` | Identifier for this individual execution |
+
+When a span is already active (e.g. a messaging SDK's process span), the WorkR span
+becomes its child; otherwise it starts a new trace. Failed executions are marked with
+an error status and the exception is recorded. When no listener is subscribed, tracing
+has no overhead.
 
 The source name `"WorkR"` is a stable public contract.
 

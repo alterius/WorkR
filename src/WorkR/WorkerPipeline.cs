@@ -9,17 +9,21 @@ namespace WorkR
     internal static class WorkerPipeline
     {
         internal static WorkerPipeline<TIn, TIn> Create<TIn>() =>
-            new((sp, value, next, ct) => next(sp, value, ct));
+            new((sp, value, next, ct) => next(sp, value, ct), []);
     }
 
     internal class WorkerPipeline<TIn, TOut>
     {
         private readonly WorkerPipelineDelegate<TIn, TOut> _pipeline;
+        private readonly IReadOnlyList<Type> _workerTypes;
 
-        internal WorkerPipeline(WorkerPipelineDelegate<TIn, TOut> pipeline)
+        internal WorkerPipeline(WorkerPipelineDelegate<TIn, TOut> pipeline, IReadOnlyList<Type> workerTypes)
         {
             ArgumentNullException.ThrowIfNull(pipeline);
+            ArgumentNullException.ThrowIfNull(workerTypes);
+
             _pipeline = pipeline;
+            _workerTypes = workerTypes;
         }
 
         internal WorkerPipeline<TIn, TNext> Then<TWorker, TNext>(
@@ -35,7 +39,8 @@ namespace WorkR
                     {
                         var worker = sp3.GetRequiredService<TWorker>();
                         return worker.ExecuteAsync(value2, (v, ct4) => next(sp3, v, ct4), ct3);
-                    })(sp2, ct2), ct));
+                    })(sp2, ct2), ct),
+                [.._workerTypes, typeof(TWorker)]);
         }
 
         internal WorkerPipeline<TIn> Finally<TWorker>(
@@ -51,7 +56,8 @@ namespace WorkR
                     {
                         var worker = sp3.GetRequiredService<TWorker>();
                         return worker.ExecuteAsync(value2, ct3);
-                    })(sp2, ct2), ct));
+                    })(sp2, ct2), ct),
+                [.._workerTypes, typeof(TWorker)]);
         }
 
         private static Func<PipelineMiddlewareDelegate, PipelineMiddlewareDelegate> BuildMiddleware(
@@ -66,12 +72,23 @@ namespace WorkR
     public class WorkerPipeline<TIn>
     {
         private readonly WorkerPipelineDelegate<TIn> _pipeline;
+        private readonly IReadOnlyList<Type> _workerTypes;
 
-        internal WorkerPipeline(WorkerPipelineDelegate<TIn> pipeline)
+        internal WorkerPipeline(WorkerPipelineDelegate<TIn> pipeline, IReadOnlyList<Type> workerTypes)
         {
             ArgumentNullException.ThrowIfNull(pipeline);
+            ArgumentNullException.ThrowIfNull(workerTypes);
+
+            if (workerTypes.Count <= 0)
+            {
+                throw new ArgumentException($"{nameof(workerTypes)} must contain at least one item.", nameof(workerTypes));
+            }
+
             _pipeline = pipeline;
+            _workerTypes = workerTypes;
         }
+
+        internal IReadOnlyList<Type> WorkerTypes => _workerTypes;
 
         internal WorkerDelegate<TIn> Build(IServiceProvider serviceProvider)
         {

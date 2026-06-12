@@ -80,6 +80,8 @@ builder.Services.AddServiceBusWorker<RawWorker>(
 
 Workers must either return a completed task or throw — the trigger does not impose any settlement outcome. Message settlement (complete, abandon, dead-letter, defer) is the worker's responsibility via `context.Args`. If no settlement is performed the SDK's default behaviour applies (controlled by `ServiceBusProcessorOptions.AutoCompleteMessages`, which defaults to `true`).
 
+If the trigger context cannot be created for a message (for example, the body fails to deserialise), the worker never runs and the message is dead-lettered with reason `TriggerContextCreationFailed` and the exception message as its error description.
+
 ## `ServiceBusTriggerContext`
 
 The context passed to your worker for each message.

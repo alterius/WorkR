@@ -148,7 +148,7 @@ namespace WorkR.Tests
                 logger ?? new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>());
 
         private static WorkerPipeline<EmptyTriggerContext> MakePipeline() =>
-            new((_, _, _) => Task.CompletedTask);
+            new((_, _, _) => Task.CompletedTask, [typeof(FakeWorker)]);
 
         private sealed class EmptyServiceProvider : IServiceProvider
         {
@@ -169,6 +169,12 @@ namespace WorkR.Tests
 
             public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 _execute(workerPipeline, stoppingToken);
+        }
+
+        private sealed class FakeWorker : IWorker<EmptyTriggerContext>
+        {
+            public Task ExecuteAsync(EmptyTriggerContext source, CancellationToken cancellationToken) =>
+                Task.CompletedTask;
         }
     }
 }

@@ -66,7 +66,14 @@ namespace WorkR.Triggers.AzureServiceBus
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to create trigger context from service bus message");
-                    throw;
+                    
+                    await args.DeadLetterMessageAsync(
+                        args.Message,
+                        deadLetterReason: "TriggerContextCreationFailed",
+                        deadLetterErrorDescription: ex.Message,
+                        cancellationToken: args.CancellationToken).ConfigureAwait(false);
+
+                    return;
                 }
 
                 await workerPipeline(context, args.CancellationToken).ConfigureAwait(false);
@@ -76,8 +83,7 @@ namespace WorkR.Triggers.AzureServiceBus
             {
                 if (args.ErrorSource == ServiceBusErrorSource.ProcessMessageCallback)
                 {
-                    // Worker failures are logged by WorkerService and context creation
-                    // failures by the message handler; avoid logging them twice
+                    // Worker pipeline failures are logged by WorkerService; avoid logging twice
                     _logger.LogDebug(args.Exception, "Service bus processor received error from message handler");
                 }
                 else
