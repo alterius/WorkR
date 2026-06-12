@@ -24,23 +24,12 @@ namespace WorkR
                     WorkerPipeline.Create<TContext>(),
                     defaultMiddleware));
 
-            services.AddSingleton<IHostedService>(sp =>
+            return services.AddSingleton<IHostedService>(sp =>
                 new WorkerService<TTrigger, TContext>(
                     sp,
                     triggerFactory(sp),
                     pipeline,
                     sp.GetRequiredService<ILogger<WorkerService<TTrigger, TContext>>>()));
-
-            return services;
         }
-
-        public static IServiceCollection AddWorker<TTrigger, TContext>(
-            this IServiceCollection services,
-            TTrigger trigger,
-            WorkerPipelineBuilderDelegate<TTrigger, TContext> builder,
-            Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
-                where TTrigger : ITrigger<TContext>
-                where TContext : TriggerContext =>
-                    AddWorker(services, _ => trigger, builder, defaultMiddleware);
     }
 }

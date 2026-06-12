@@ -54,25 +54,68 @@ namespace WorkR.Triggers.AzureServiceBus
 
                 using var _ = _logger.BeginScope(new Dictionary<string, object?>
                 {
-                    ["ExecutionId"] = executionId,
                     ["MessageId"] = args.Message.MessageId,
                 });
 
-                _logger.LogDebug("Service bus trigger executing...");
+                TContext context;
 
-                var context = await _contextFactory(executionId, args).ConfigureAwait(false);
+                try
+                {
+                    context = await _contextFactory(executionId, args).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                    when (args.CancellationToken.IsCancellationRequested)
+                {
+                    // Expected shutdown; rethrow so the message is abandoned and redelivered
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create trigger context from service bus message");
+
+                    try
+                    {
+                        await args.DeadLetterMessageAsync(
+                            args.Message,
+                            deadLetterReason: "TriggerContextCreationFailed",
+                            deadLetterErrorDescription: ex.Message,
+                            cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex2)
+                    {
+                        _logger.LogError(ex2, "Failed to dead letter message");
+                    }
+
+                    return;
+                }
+
                 await workerPipeline(context, args.CancellationToken).ConfigureAwait(false);
-
-                _logger.LogDebug("Service bus trigger executed");
             };
 
             _serviceBusProcessor.ProcessErrorAsync += args =>
             {
+                if (args.ErrorSource == ServiceBusErrorSource.ProcessMessageCallback)
+                {
+                    if (args.Exception is OperationCanceledException && args.CancellationToken.IsCancellationRequested)
+                    {
+                        // Expected shutdown
+                        return Task.CompletedTask;
+                    }
+
+                    // Worker pipeline failures are logged by WorkerService; avoid logging twice
+                    _logger.LogDebug(args.Exception, "Service bus processor received error from message handler");
+                    return Task.CompletedTask;
+                }
+
                 _logger.LogError(args.Exception, "Service bus processor failed with unhandled exception");
+
                 return Task.CompletedTask;
             };
 
-            using var _ = _logger.BeginScope(new Dictionary<string, object?> { ["EntityPath"] = _serviceBusProcessor.EntityPath });
+            using var _ = _logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["EntityPath"] = _serviceBusProcessor.EntityPath
+            });
 
             _logger.LogInformation("Service bus trigger initialised");
 

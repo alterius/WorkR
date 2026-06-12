@@ -246,8 +246,9 @@ namespace WorkR.Triggers.Timers.Tests
         }
 
         [Fact]
-        public async Task ExecuteAsync_WhenWorkerPipelineThrows_LogsError()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrows_DoesNotLogError()
         {
+            // Worker failures are logged by WorkerService, not the trigger
             var timeProvider = new FakeTimeProvider(StartTime);
             var logger = new FakeLogger<ScheduledTrigger>();
             var workerThrew = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -264,7 +265,7 @@ namespace WorkR.Triggers.Timers.Tests
             await cts.CancelAsync();
             await Should.ThrowAsync<OperationCanceledException>(() => executeTask);
 
-            logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
+            logger.Collector.GetSnapshot().ShouldNotContain(log => log.Level == LogLevel.Error);
         }
 
         [Fact]

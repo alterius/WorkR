@@ -115,15 +115,12 @@ namespace WorkR.Triggers.AzureStorageQueues
                                 {
                                     using var __ = _logger.BeginScope(new Dictionary<string, object?>
                                     {
-                                        ["ExecutionId"] = executionId,
                                         ["MessageId"] = message.MessageId,
                                     });
 
-                                    _logger.LogDebug("Storage queue trigger executing...");
-
                                     try
                                     {
-                                        var context = await _contextFactory(executionId, message).ConfigureAwait(false);
+                                        var context = await CreateContextAsync(executionId, message).ConfigureAwait(false);
 
                                         await workerPipeline(context, stoppingToken).ConfigureAwait(false);
 
@@ -131,27 +128,27 @@ namespace WorkR.Triggers.AzureStorageQueues
                                         {
                                             await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, stoppingToken);
                                         }
-
-                                        _logger.LogDebug("Storage queue trigger executed");
                                     }
                                     catch (OperationCanceledException)
                                         when (stoppingToken.IsCancellationRequested)
                                     {
                                         // Expected shutdown
                                     }
-                                    catch (Exception ex)
+                                    catch (Exception)
                                     {
-                                        _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
-
+                                        // Pipeline failures are logged by WorkerService; the trigger
+                                        // only decides what happens to the message
                                         if (_options.MaxDeliveryCount > 0 && message.DequeueCount >= _options.MaxDeliveryCount)
                                         {
+                                            _logger.LogWarning("Message reached max delivery count of {maxDeliveryCount}; dead lettering", _options.MaxDeliveryCount);
+
                                             try
                                             {
                                                 await DeadLetterMessageAsync(message, CancellationToken.None).ConfigureAwait(false);
                                             }
-                                            catch (Exception ex2)
+                                            catch (Exception ex)
                                             {
-                                                _logger.LogError(ex2, "Failed to dead letter message");
+                                                _logger.LogError(ex, "Failed to dead letter message");
                                             }
                                         }
                                     }
@@ -181,6 +178,19 @@ namespace WorkR.Triggers.AzureStorageQueues
                 }
 
                 _logger.LogInformation("Storage queue trigger stopped");
+            }
+        }
+
+        private async Task<TContext> CreateContextAsync(Guid executionId, QueueMessage message)
+        {
+            try
+            {
+                return await _contextFactory(executionId, message).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create trigger context from queue message");
+                throw;
             }
         }
 

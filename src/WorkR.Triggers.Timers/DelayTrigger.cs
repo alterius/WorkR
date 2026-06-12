@@ -40,27 +40,18 @@ namespace WorkR.Triggers.Timers
                 {
                     var context = new EmptyTriggerContext(_timeProvider.GetUtcNow());
 
-                    using var _ = _logger.BeginScope(
-                        new Dictionary<string, object?>
-                        {
-                            ["ExecutionId"] = context.ExecutionId
-                        });
-
-                    _logger.LogDebug("Delay trigger executing...");
-
                     try
                     {
                         await workerPipeline(context, stoppingToken).ConfigureAwait(false);
-                        _logger.LogDebug("Delay trigger executed");
                     }
                     catch (OperationCanceledException)
                         when (stoppingToken.IsCancellationRequested)
                     {
-                        throw;
+                        // Expected shutdown
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        _logger.LogError(ex, "Worker pipeline failed with unhandled exception");
+                        // Logged by WorkerService; swallow so the loop keeps running
                     }
 
                     await Task.Delay(_delay, _timeProvider, stoppingToken).ConfigureAwait(false);

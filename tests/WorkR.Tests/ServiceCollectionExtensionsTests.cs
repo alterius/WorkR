@@ -41,18 +41,6 @@ namespace WorkR.Tests
             services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
         }
 
-        [Fact]
-        public void AddWorker_WithInstance_RegistersHostedService()
-        {
-            var services = new ServiceCollection();
-
-            services.AddWorker<FakeTrigger, EmptyTriggerContext>(
-                new FakeTrigger(),
-                builder => builder.AddWorker<FakeWorker>());
-
-            services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
-        }
-
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
             public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>

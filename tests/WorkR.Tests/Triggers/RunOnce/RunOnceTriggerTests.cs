@@ -66,7 +66,7 @@ namespace WorkR.Tests.Triggers.RunOnce
 
             var snapshot = logger.Collector.GetSnapshot();
             snapshot[0].Level.ShouldBe(LogLevel.Information);
-            snapshot[0].Message.ShouldContain("executing");
+            snapshot[0].Message.ShouldContain("initialised");
         }
 
         [Fact]
@@ -91,23 +91,24 @@ namespace WorkR.Tests.Triggers.RunOnce
         }
 
         [Fact]
-        public async Task ExecuteAsync_WhenWorkerPipelineThrows_LogsError()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrows_DoesNotLogError()
         {
+            // Worker failures are logged by WorkerService, not the trigger
             var logger = new FakeLogger<RunOnceTrigger>();
             var trigger = new RunOnceTrigger(TimeProvider.System, logger);
 
             await trigger.ExecuteAsync((_, _) => throw new InvalidOperationException("boom"), TestContext.Current.CancellationToken);
 
-            logger.Collector.GetSnapshot().ShouldContain(log => log.Level == LogLevel.Error);
+            logger.Collector.GetSnapshot().ShouldNotContain(log => log.Level == LogLevel.Error);
         }
 
         [Fact]
-        public async Task ExecuteAsync_WhenWorkerPipelineThrowsOperationCancelledAndTokenCancelled_Propagates()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrowsOperationCancelledAndTokenCancelled_Swallows()
         {
             using var cts = new CancellationTokenSource();
             var trigger = Create();
 
-            await Should.ThrowAsync<OperationCanceledException>(() =>
+            await Should.NotThrowAsync(() =>
                 trigger.ExecuteAsync((_, ct) =>
                 {
                     cts.Cancel();
