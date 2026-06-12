@@ -70,12 +70,15 @@ namespace WorkR
             {
                 // No explicit parent: picks up Activity.Current ambiently
                 // (e.g. a messaging SDK's process span) or becomes a trace root.
-                using var activity = WorkRDiagnostics.Source.StartActivity(spanName);
+                using var activity = WorkRDiagnostics.Source.StartActivity("Execute", ActivityKind.Internal);
 
-                activity?.SetTag("workr.service.id", _workerServiceId);
-                activity?.SetTag("workr.execution.id", context.ExecutionId);
-                activity?.SetTag("workr.trigger", triggerName);
-                activity?.SetTag("workr.trigger.version", triggerVersion);
+                if (activity?.IsAllDataRequested ?? false)
+                {
+                    activity.SetTag("workr.service.id", _workerServiceId);
+                    activity.SetTag("workr.execution.id", context.ExecutionId);
+                    activity.SetTag("workr.trigger", triggerName);
+                    activity.SetTag("workr.trigger.version", triggerVersion);
+                }
 
                 using var _ = _logger.BeginScope(
                     new Dictionary<string, object?>
@@ -100,20 +103,12 @@ namespace WorkR
                 }
                 catch (Exception ex)
                 {
-                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                    activity?.SetTag("error.type", ex.GetType().FullName);
-#if NET9_0_OR_GREATER
-                    activity?.AddException(ex);
-#else
-                    activity?.AddEvent(new ActivityEvent(
-                        "exception",
-                        tags: new ActivityTagsCollection
-                        {
-                            ["exception.type"] = ex.GetType().ToString(),
-                            ["exception.message"] = ex.Message,
-                            ["exception.stacktrace"] = ex.ToString()
-                        }));
-#endif
+                    if (activity?.IsAllDataRequested ?? false)
+                    {
+                        activity.SetStatus(ActivityStatusCode.Error, ex.Message);
+                        activity.SetTag("error.type", ex.GetType().FullName);
+                        AddException(activity, ex);
+                    }
 
                     _logger.LogError(ex, "Worker pipeline execution failed");
 
@@ -126,6 +121,22 @@ namespace WorkR
         {
             var backtick = name.IndexOf('`');
             return backtick < 0 ? name : name[..backtick];
+        }
+
+        private static void AddException(Activity activity, Exception ex)
+        {
+#if NET9_0_OR_GREATER
+            activity.AddException(ex);
+#else
+            activity.AddEvent(new ActivityEvent(
+                "exception",
+                tags: new ActivityTagsCollection
+                {
+                    ["exception.type"] = ex.GetType().ToString(),
+                    ["exception.message"] = ex.Message,
+                    ["exception.stacktrace"] = ex.ToString()
+                }));
+#endif
         }
     }
 }
