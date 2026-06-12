@@ -47,7 +47,7 @@ namespace WorkR.Triggers.Timers
                     catch (OperationCanceledException)
                         when (stoppingToken.IsCancellationRequested)
                     {
-                        throw;
+                        // Expected shutdown
                     }
                     catch (Exception)
                     {

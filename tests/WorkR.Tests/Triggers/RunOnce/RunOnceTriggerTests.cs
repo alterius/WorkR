@@ -66,7 +66,7 @@ namespace WorkR.Tests.Triggers.RunOnce
 
             var snapshot = logger.Collector.GetSnapshot();
             snapshot[0].Level.ShouldBe(LogLevel.Information);
-            snapshot[0].Message.ShouldContain("started");
+            snapshot[0].Message.ShouldContain("initialised");
         }
 
         [Fact]
@@ -103,12 +103,12 @@ namespace WorkR.Tests.Triggers.RunOnce
         }
 
         [Fact]
-        public async Task ExecuteAsync_WhenWorkerPipelineThrowsOperationCancelledAndTokenCancelled_Propagates()
+        public async Task ExecuteAsync_WhenWorkerPipelineThrowsOperationCancelledAndTokenCancelled_Swallows()
         {
             using var cts = new CancellationTokenSource();
             var trigger = Create();
 
-            await Should.ThrowAsync<OperationCanceledException>(() =>
+            await Should.NotThrowAsync(() =>
                 trigger.ExecuteAsync((_, ct) =>
                 {
                     cts.Cancel();

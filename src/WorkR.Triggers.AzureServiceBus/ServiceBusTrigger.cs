@@ -83,13 +83,18 @@ namespace WorkR.Triggers.AzureServiceBus
             {
                 if (args.ErrorSource == ServiceBusErrorSource.ProcessMessageCallback)
                 {
+                    if (args.Exception is OperationCanceledException && args.CancellationToken.IsCancellationRequested)
+                    {
+                        // Expected shutdown
+                        return Task.CompletedTask;
+                    }
+
                     // Worker pipeline failures are logged by WorkerService; avoid logging twice
                     _logger.LogDebug(args.Exception, "Service bus processor received error from message handler");
+                    return Task.CompletedTask;
                 }
-                else
-                {
-                    _logger.LogError(args.Exception, "Service bus processor failed with unhandled exception");
-                }
+
+                _logger.LogError(args.Exception, "Service bus processor failed with unhandled exception");
 
                 return Task.CompletedTask;
             };
