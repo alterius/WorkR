@@ -63,15 +63,28 @@ namespace WorkR.Triggers.AzureServiceBus
                 {
                     context = await _contextFactory(executionId, args).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException)
+                    when (args.CancellationToken.IsCancellationRequested)
+                {
+                    // Expected shutdown; rethrow so the message is abandoned and redelivered
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to create trigger context from service bus message");
-                    
-                    await args.DeadLetterMessageAsync(
-                        args.Message,
-                        deadLetterReason: "TriggerContextCreationFailed",
-                        deadLetterErrorDescription: ex.Message,
-                        cancellationToken: args.CancellationToken).ConfigureAwait(false);
+
+                    try
+                    {
+                        await args.DeadLetterMessageAsync(
+                            args.Message,
+                            deadLetterReason: "TriggerContextCreationFailed",
+                            deadLetterErrorDescription: ex.Message,
+                            cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex2)
+                    {
+                        _logger.LogError(ex2, "Failed to dead letter message");
+                    }
 
                     return;
                 }
