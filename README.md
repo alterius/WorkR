@@ -113,6 +113,43 @@ has no overhead.
 
 The source name `"WorkR"` is a stable public contract.
 
+## Metrics
+
+WorkR records the duration of every worker pipeline execution to a `Meter` named
+`"WorkR"`. Unlike spans, metrics are not subject to trace sampling, so the histogram
+gives reliable duration percentiles and error rates per pipeline regardless of how
+traces are sampled. Enable it by adding the meter to your OpenTelemetry
+`MeterProviderBuilder`:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter("WorkR"));
+```
+
+A single histogram is emitted:
+
+| Instrument | Unit | Description |
+| --- | --- | --- |
+| `workr.execution.duration` | `s` | Duration of worker pipeline executions |
+
+Its count doubles as the execution rate, so there is no separate counter. Each
+measurement carries low-cardinality tags only:
+
+| Tag | Description |
+| --- | --- |
+| `workr.trigger` | Trigger type name |
+| `workr.pipeline` | Worker chain, joined with ` -> ` |
+| `error.type` | Full type name of the exception, present only on failed executions |
+
+Successful and failed executions are recorded; executions cancelled during shutdown
+are not, so they neither skew the duration percentiles nor count as errors. When no
+listener is subscribed the measurement, including the timestamp capture, is skipped
+entirely. On .NET 9 and later the histogram ships with seconds-scale bucket boundaries
+suited to worker pipelines; on .NET 8 configure boundaries with an OpenTelemetry View
+if the defaults don't fit.
+
+The meter name `"WorkR"` is a stable public contract.
+
 ---
 
 ## Packages

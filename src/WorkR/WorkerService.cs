@@ -103,9 +103,17 @@ namespace WorkR
 
                 _logger.LogDebug("Worker pipeline executing...");
 
+                var metricsEnabled = WorkRDiagnostics.ExecutionDuration.Enabled;
+                var startTimestamp = metricsEnabled ? Stopwatch.GetTimestamp() : 0L;
+
                 try
                 {
                     await pipeline(context, cancellationToken).ConfigureAwait(false);
+
+                    if (metricsEnabled)
+                    {
+                        RecordExecutionDuration(startTimestamp, triggerName, pipelineName, errorType: null);
+                    }
 
                     _logger.LogDebug("Worker pipeline executed");
                 }
@@ -118,6 +126,11 @@ namespace WorkR
                 }
                 catch (Exception ex)
                 {
+                    if (metricsEnabled)
+                    {
+                        RecordExecutionDuration(startTimestamp, triggerName, pipelineName, ex.GetType().FullName);
+                    }
+
                     if (activity?.IsAllDataRequested ?? false)
                     {
                         activity.SetStatus(ActivityStatusCode.Error, ex.Message);
@@ -130,6 +143,28 @@ namespace WorkR
                     throw;
                 }
             };
+        }
+
+        private static void RecordExecutionDuration(
+            long startTimestamp,
+            string triggerName,
+            string pipelineName,
+            string? errorType)
+        {
+            var elapsed = Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds;
+
+            var tags = new TagList
+            {
+                { "workr.trigger", triggerName },
+                { "workr.pipeline", pipelineName }
+            };
+
+            if (errorType is not null)
+            {
+                tags.Add("error.type", errorType);
+            }
+
+            WorkRDiagnostics.ExecutionDuration.Record(elapsed, tags);
         }
 
         private static void AddException(Activity activity, Exception ex)
