@@ -183,14 +183,14 @@ namespace WorkR.Tests
         [Fact]
         public async Task ExecuteAsync_LogsWorkerExecutingAndExecuted_WithExecutionIdScope()
         {
-            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var provider = new FakeLoggerProvider();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
-            var service = Create(new FakeTrigger((next, ct) => next(context, ct)), logger: logger);
+            var service = Create(new FakeTrigger((next, ct) => next(context, ct)), loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
 
-            var snapshot = logger.Collector.GetSnapshot();
+            var snapshot = provider.Collector.GetSnapshot();
 
             var executing = snapshot.Where(log => log.Message == "Worker pipeline executing...").ShouldHaveSingleItem();
             executing.Level.ShouldBe(LogLevel.Debug);
@@ -206,14 +206,14 @@ namespace WorkR.Tests
         [Fact]
         public async Task ExecuteAsync_BeginsServiceScopeWithVersionTriggerAndPipeline()
         {
-            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var provider = new FakeLoggerProvider();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
-            var service = Create(new FakeTrigger((next, ct) => next(context, ct)), logger: logger);
+            var service = Create(new FakeTrigger((next, ct) => next(context, ct)), loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
 
-            var starting = logger.Collector.GetSnapshot()
+            var starting = provider.Collector.GetSnapshot()
                 .Where(log => log.Message == "Worker service starting...")
                 .ShouldHaveSingleItem();
 
@@ -232,7 +232,7 @@ namespace WorkR.Tests
         [Fact]
         public async Task ExecuteAsync_WhenWorkerThrows_LogsError()
         {
-            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var provider = new FakeLoggerProvider();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             var service = Create(
                 new FakeTrigger(async (next, ct) =>
@@ -248,12 +248,12 @@ namespace WorkR.Tests
                 pipeline: new WorkerPipeline<EmptyTriggerContext>(
                     (_, _, _) => throw new InvalidOperationException("boom"),
                     [typeof(FakeWorker)]),
-                logger: logger);
+                loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
 
-            var error = logger.Collector.GetSnapshot().Where(log => log.Level == LogLevel.Error).ShouldHaveSingleItem();
+            var error = provider.Collector.GetSnapshot().Where(log => log.Level == LogLevel.Error).ShouldHaveSingleItem();
             error.Message.ShouldBe("Worker pipeline execution failed");
             error.Exception.ShouldBeOfType<InvalidOperationException>();
         }
@@ -261,7 +261,7 @@ namespace WorkR.Tests
         [Fact]
         public async Task ExecuteAsync_WhenExecutionCancelled_DoesNotLogError()
         {
-            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var provider = new FakeLoggerProvider();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             using var executionCts = new CancellationTokenSource();
             var service = Create(
@@ -281,12 +281,12 @@ namespace WorkR.Tests
                     ct.ThrowIfCancellationRequested();
                     return Task.CompletedTask;
                 }, [typeof(FakeWorker)]),
-                logger: logger);
+                loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
 
-            var snapshot = logger.Collector.GetSnapshot();
+            var snapshot = provider.Collector.GetSnapshot();
             snapshot.ShouldNotContain(log => log.Level == LogLevel.Error);
 
             var cancelled = snapshot.Where(log => log.Message == "Worker pipeline execution cancelled").ShouldHaveSingleItem();
@@ -311,11 +311,11 @@ namespace WorkR.Tests
         private static WorkerService<FakeTrigger, EmptyTriggerContext> Create(
             FakeTrigger? trigger = null,
             WorkerPipeline<EmptyTriggerContext>? pipeline = null,
-            FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>? logger = null) =>
+            FakeLoggerProvider? loggerProvider = null) =>
             new(EmptyServiceProvider.Instance,
                 trigger ?? new FakeTrigger(),
                 pipeline ?? new WorkerPipeline<EmptyTriggerContext>((_, _, _) => Task.CompletedTask, [typeof(FakeWorker)]),
-                logger ?? new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>());
+                new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
 
         private sealed class EmptyServiceProvider : IServiceProvider
         {

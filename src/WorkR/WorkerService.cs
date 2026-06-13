@@ -14,21 +14,23 @@ namespace WorkR
         private readonly WorkerPipeline<TContext> _workerPipeline;
         private readonly ILogger _logger;
 
+        private const string LogCategory = "WorkR.WorkerService";
+
         public WorkerService(
             IServiceProvider serviceProvider,
             TTrigger trigger,
             WorkerPipeline<TContext> workerPipeline,
-            ILogger<WorkerService<TTrigger, TContext>> logger)
+            ILoggerFactory loggerFactory)
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
             ArgumentNullException.ThrowIfNull(trigger);
             ArgumentNullException.ThrowIfNull(workerPipeline);
-            ArgumentNullException.ThrowIfNull(logger);
+            ArgumentNullException.ThrowIfNull(loggerFactory);
 
             _serviceProvider = serviceProvider;
             _trigger = trigger;
             _workerPipeline = workerPipeline;
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger(LogCategory);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
