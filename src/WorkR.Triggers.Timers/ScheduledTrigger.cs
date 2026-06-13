@@ -13,6 +13,22 @@ namespace WorkR.Triggers.Timers
         private readonly bool _cancelOnOverlap;
 
         public ScheduledTrigger(
+            string schedule,
+            TimeProvider timeProvider,
+            ILogger<ScheduledTrigger> logger,
+            bool runOnStartup = false,
+            bool includeSeconds = false,
+            bool cancelOnOverlap = false)
+            : this(
+                Parse(schedule, includeSeconds),
+                timeProvider,
+                logger,
+                runOnStartup,
+                cancelOnOverlap)
+        {
+        }
+
+        internal ScheduledTrigger(
             CrontabSchedule schedule,
             TimeProvider timeProvider,
             ILogger<ScheduledTrigger> logger,
@@ -28,6 +44,18 @@ namespace WorkR.Triggers.Timers
             _logger = logger;
             _runOnStartup = runOnStartup;
             _cancelOnOverlap = cancelOnOverlap;
+        }
+
+        private static CrontabSchedule Parse(string schedule, bool includeSeconds)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(schedule);
+
+            return CrontabSchedule.Parse(
+                schedule,
+                new CrontabSchedule.ParseOptions
+                {
+                    IncludingSeconds = includeSeconds
+                });
         }
 
         public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)

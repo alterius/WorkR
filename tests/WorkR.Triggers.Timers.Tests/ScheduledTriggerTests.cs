@@ -16,7 +16,41 @@ namespace WorkR.Triggers.Timers.Tests
         public void Constructor_WhenScheduleIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new ScheduledTrigger(null!, TimeProvider.System, new FakeLogger<ScheduledTrigger>()));
+                new ScheduledTrigger((CrontabSchedule)null!, TimeProvider.System, new FakeLogger<ScheduledTrigger>()));
+        }
+
+        [Fact]
+        public void Constructor_WhenScheduleStringIsNull_ThrowsArgumentNullException()
+        {
+            Should.Throw<ArgumentNullException>(() =>
+                new ScheduledTrigger((string)null!, TimeProvider.System, new FakeLogger<ScheduledTrigger>()));
+        }
+
+        [Fact]
+        public void Constructor_WhenScheduleStringIsWhiteSpace_ThrowsArgumentException()
+        {
+            Should.Throw<ArgumentException>(() =>
+                new ScheduledTrigger("   ", TimeProvider.System, new FakeLogger<ScheduledTrigger>()));
+        }
+
+        [Fact]
+        public void Constructor_WhenScheduleStringIsValid_ParsesAndConstructs()
+        {
+            var trigger = new ScheduledTrigger("* * * * *", TimeProvider.System, new FakeLogger<ScheduledTrigger>());
+
+            trigger.ShouldNotBeNull();
+        }
+
+        [Fact]
+        public void Constructor_WhenScheduleStringIncludesSeconds_ParsesSixFieldSchedule()
+        {
+            var trigger = new ScheduledTrigger(
+                "*/5 * * * * *",
+                TimeProvider.System,
+                new FakeLogger<ScheduledTrigger>(),
+                includeSeconds: true);
+
+            trigger.ShouldNotBeNull();
         }
 
         [Fact]
