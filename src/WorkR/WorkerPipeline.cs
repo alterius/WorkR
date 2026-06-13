@@ -12,7 +12,7 @@ namespace WorkR
             new((sp, value, next, ct) => next(sp, value, ct), []);
     }
 
-    internal class WorkerPipeline<TIn, TOut>
+    internal sealed class WorkerPipeline<TIn, TOut>
     {
         private readonly WorkerPipelineDelegate<TIn, TOut> _pipeline;
         private readonly IReadOnlyList<Type> _workerTypes;
@@ -69,7 +69,7 @@ namespace WorkR
         }
     }
 
-    public class WorkerPipeline<TIn>
+    public sealed class WorkerPipeline<TIn>
     {
         private readonly WorkerPipelineDelegate<TIn> _pipeline;
         private readonly IReadOnlyList<Type> _workerTypes;
