@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR
 {
-    public sealed class WorkerService<TTrigger, TContext> : BackgroundService
+    internal sealed class WorkerService<TTrigger, TContext> : BackgroundService
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {
