@@ -4,6 +4,9 @@
 [![NuGet](https://img.shields.io/nuget/v/WorkR.Triggers.AzureServiceBus)](https://www.nuget.org/packages/WorkR.Triggers.AzureServiceBus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/alterius/WorkR/blob/master/LICENSE)
 
+> [!IMPORTANT]
+> Heads up — WorkR is still in development. Expect breaking API changes before v1.0.
+
 Azure Service Bus trigger for [WorkR](https://github.com/alterius/WorkR). Processes messages from a queue or topic subscription and drives them through a composable worker pipeline.
 
 ---

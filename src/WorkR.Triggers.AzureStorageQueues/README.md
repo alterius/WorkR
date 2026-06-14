@@ -4,6 +4,9 @@
 [![NuGet](https://img.shields.io/nuget/v/WorkR.Triggers.AzureStorageQueues)](https://www.nuget.org/packages/WorkR.Triggers.AzureStorageQueues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/alterius/WorkR/blob/master/LICENSE)
 
+> [!IMPORTANT]
+> Heads up — WorkR is still in development. Expect breaking API changes before v1.0.
+
 Azure Storage Queue polling trigger for [WorkR](https://github.com/alterius/WorkR). Polls a queue, [optionally] deserialises messages, and passes them through a composable worker pipeline.
 
 ---

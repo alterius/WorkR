@@ -8,6 +8,9 @@
 [![NuGet](https://img.shields.io/nuget/v/WorkR.Triggers.AzureServiceBus?label=WorkR.Triggers.AzureServiceBus)](https://www.nuget.org/packages/WorkR.Triggers.AzureServiceBus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+> [!IMPORTANT]
+> Heads up — WorkR is still in development. Expect breaking API changes before v1.0.
+
 WorkR is a lightweight, extensible .NET library for building composable background worker pipelines on top of `BackgroundService`. It replaces deeply nested loops and ad-hoc polling logic with a clean, testable, and DI-friendly abstraction.
 
 ---

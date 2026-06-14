@@ -4,6 +4,9 @@
 [![NuGet](https://img.shields.io/nuget/v/WorkR.Triggers.Timers)](https://www.nuget.org/packages/WorkR.Triggers.Timers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/alterius/WorkR/blob/master/LICENSE)
 
+> [!IMPORTANT]
+> Heads up — WorkR is still in development. Expect breaking API changes before v1.0.
+
 Timer-based triggers for [WorkR](https://github.com/alterius/WorkR), supporting fixed-delay and cron-scheduled background workers.
 
 ---

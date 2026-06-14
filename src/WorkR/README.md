@@ -4,6 +4,9 @@
 [![NuGet](https://img.shields.io/nuget/v/WorkR)](https://www.nuget.org/packages/WorkR)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/alterius/WorkR/blob/master/LICENSE)
 
+> [!IMPORTANT]
+> Heads up — WorkR is still in development. Expect breaking API changes before v1.0.
+
 A lightweight .NET background worker framework built on top of `IHostedService`. Define workers and triggers, compose middleware, and let WorkR manage the execution loop.
 
 ---
