@@ -4,10 +4,12 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR
 {
-    public sealed class WorkerService<TTrigger, TContext> : BackgroundService
+    internal sealed class WorkerService<TTrigger, TContext> : BackgroundService
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {
+        private const string LogCategory = $"{nameof(WorkR)}.WorkerService";
+
         private readonly Guid _workerServiceId = Guid.NewGuid();
         private readonly IServiceProvider _serviceProvider;
         private readonly TTrigger _trigger;
@@ -18,17 +20,17 @@ namespace WorkR
             IServiceProvider serviceProvider,
             TTrigger trigger,
             WorkerPipeline<TContext> workerPipeline,
-            ILogger<WorkerService<TTrigger, TContext>> logger)
+            ILoggerFactory loggerFactory)
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
             ArgumentNullException.ThrowIfNull(trigger);
             ArgumentNullException.ThrowIfNull(workerPipeline);
-            ArgumentNullException.ThrowIfNull(logger);
+            ArgumentNullException.ThrowIfNull(loggerFactory);
 
             _serviceProvider = serviceProvider;
             _trigger = trigger;
             _workerPipeline = workerPipeline;
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger(LogCategory);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

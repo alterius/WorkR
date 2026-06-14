@@ -4,6 +4,9 @@
 [![NuGet](https://img.shields.io/nuget/v/WorkR.Abstractions)](https://www.nuget.org/packages/WorkR.Abstractions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/alterius/WorkR/blob/master/LICENSE)
 
+> [!IMPORTANT]
+> Heads up — WorkR is still in development. Expect breaking API changes before v1.0.
+
 Core interfaces and abstractions for the [WorkR](https://github.com/alterius/WorkR) background worker framework.
 
 Reference this package from libraries that define reusable workers, triggers, or middleware. It targets `netstandard2.0` and has no dependencies.

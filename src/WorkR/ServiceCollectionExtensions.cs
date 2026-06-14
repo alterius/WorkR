@@ -29,7 +29,7 @@ namespace WorkR
                     sp,
                     triggerFactory(sp),
                     pipeline,
-                    sp.GetRequiredService<ILogger<WorkerService<TTrigger, TContext>>>()));
+                    sp.GetRequiredService<ILoggerFactory>()));
         }
     }
 }

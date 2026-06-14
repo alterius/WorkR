@@ -15,7 +15,7 @@ namespace WorkR.Tests
                     null!,
                     new FakeTrigger(),
                     MakePipeline(),
-                    new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>()));
+                    FakeFactory()));
         }
 
         [Fact]
@@ -26,7 +26,7 @@ namespace WorkR.Tests
                     EmptyServiceProvider.Instance,
                     null!,
                     MakePipeline(),
-                    new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>()));
+                    FakeFactory()));
         }
 
         [Fact]
@@ -37,11 +37,11 @@ namespace WorkR.Tests
                     EmptyServiceProvider.Instance,
                     new FakeTrigger(),
                     null!,
-                    new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>()));
+                    FakeFactory()));
         }
 
         [Fact]
-        public void Constructor_WhenLoggerIsNull_ThrowsArgumentNullException()
+        public void Constructor_WhenLoggerFactoryIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
@@ -70,13 +70,13 @@ namespace WorkR.Tests
         [Fact]
         public async Task ExecuteAsync_LogsStartAndStop()
         {
-            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
-            var service = Create(logger: logger);
+            var provider = new FakeLoggerProvider();
+            var service = Create(loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
 
-            logger.Collector.GetSnapshot()
+            provider.Collector.GetSnapshot()
                 .Count(l => l.Level == LogLevel.Information)
                 .ShouldBe(3); // starting, started, stopped
         }
@@ -101,7 +101,7 @@ namespace WorkR.Tests
         [Fact]
         public async Task ExecuteAsync_WhenCancelledDuringShutdown_LogsShuttingDown()
         {
-            var logger = new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>();
+            var provider = new FakeLoggerProvider();
             var triggerRunning = new SemaphoreSlim(0, 1);
             var service = Create(
                 new FakeTrigger(async (next, ct) =>
@@ -109,13 +109,13 @@ namespace WorkR.Tests
                     triggerRunning.Release();
                     await Task.Delay(Timeout.Infinite, ct);
                 }),
-                logger);
+                provider);
 
             await service.StartAsync(CancellationToken.None);
             await triggerRunning.WaitAsync(TestContext.Current.CancellationToken);
             await service.StopAsync(CancellationToken.None);
 
-            logger.Collector.GetSnapshot()
+            provider.Collector.GetSnapshot()
                 .Count(l => l.Level == LogLevel.Information)
                 .ShouldBe(4); // starting, started, shutting down, stopped
         }
@@ -141,11 +141,14 @@ namespace WorkR.Tests
 
         private static WorkerService<FakeTrigger, EmptyTriggerContext> Create(
             FakeTrigger? trigger = null,
-            FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>? logger = null) =>
+            FakeLoggerProvider? loggerProvider = null) =>
             new(EmptyServiceProvider.Instance,
                 trigger ?? new FakeTrigger(),
                 MakePipeline(),
-                logger ?? new FakeLogger<WorkerService<FakeTrigger, EmptyTriggerContext>>());
+                new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
+
+        private static ILoggerFactory FakeFactory() =>
+            new LoggerFactory([new FakeLoggerProvider()]);
 
         private static WorkerPipeline<EmptyTriggerContext> MakePipeline() =>
             new((_, _, _) => Task.CompletedTask, [typeof(FakeWorker)]);

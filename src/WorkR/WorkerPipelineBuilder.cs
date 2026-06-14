@@ -8,7 +8,7 @@ namespace WorkR
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext;
 
-    public class WorkerPipelineBuilder<TTrigger, TContext>
+    public sealed class WorkerPipelineBuilder<TTrigger, TContext>
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {
@@ -72,7 +72,7 @@ namespace WorkR
         }
     }
 
-    public class WorkerPipelineBuilder<TTrigger, TContext, TOut>
+    public sealed class WorkerPipelineBuilder<TTrigger, TContext, TOut>
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using NCrontab;
 using WorkR.Middleware;
 
 namespace WorkR.Triggers.Timers
@@ -45,18 +44,13 @@ namespace WorkR.Triggers.Timers
             this IServiceCollection services,
             string schedule,
             WorkerPipelineBuilderDelegate<ScheduledTrigger, EmptyTriggerContext> builder,
-            bool runOnStartup = false,
             bool includeSeconds = false,
+            bool runOnStartup = false,
             bool cancelOnOverlap = false)
         {
-            services.TryAddSingleton(TimeProvider.System);
+            var cronTabSchedule = ScheduledTrigger.ParseSchedule(schedule, includeSeconds);
 
-            var cronTabSchedule = CrontabSchedule.Parse(
-                schedule,
-                new CrontabSchedule.ParseOptions
-                {
-                    IncludingSeconds = includeSeconds
-                });
+            services.TryAddSingleton(TimeProvider.System);
 
             return services.AddWorker(
                 sp => new ScheduledTrigger(
@@ -73,8 +67,8 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddScheduledWorker<TWorker>(
             this IServiceCollection services,
             string schedule,
-            bool runOnStartup = false,
             bool includeSeconds = false,
+            bool runOnStartup = false,
             bool cancelOnOverlap = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
@@ -83,8 +77,8 @@ namespace WorkR.Triggers.Timers
             return services.AddScheduledWorker(
                 schedule,
                 builder => builder.AddWorker<TWorker>(workerLifetime, middleware),
-                runOnStartup,
                 includeSeconds,
+                runOnStartup,
                 cancelOnOverlap);
         }
     }
