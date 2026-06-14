@@ -16,11 +16,11 @@ namespace WorkR.Triggers.Timers
             string schedule,
             TimeProvider timeProvider,
             ILogger<ScheduledTrigger> logger,
-            bool runOnStartup = false,
             bool includeSeconds = false,
+            bool runOnStartup = false,
             bool cancelOnOverlap = false)
             : this(
-                Parse(schedule, includeSeconds),
+                ParseSchedule(schedule, includeSeconds),
                 timeProvider,
                 logger,
                 runOnStartup,
@@ -44,18 +44,6 @@ namespace WorkR.Triggers.Timers
             _logger = logger;
             _runOnStartup = runOnStartup;
             _cancelOnOverlap = cancelOnOverlap;
-        }
-
-        private static CrontabSchedule Parse(string schedule, bool includeSeconds)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(schedule);
-
-            return CrontabSchedule.Parse(
-                schedule,
-                new CrontabSchedule.ParseOptions
-                {
-                    IncludingSeconds = includeSeconds
-                });
         }
 
         public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
@@ -144,6 +132,18 @@ namespace WorkR.Triggers.Timers
 
                 _logger.LogInformation("Scheduled trigger stopped");
             }
+        }
+
+        internal static CrontabSchedule ParseSchedule(string schedule, bool includeSeconds)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(schedule);
+
+            return CrontabSchedule.Parse(
+                schedule,
+                new CrontabSchedule.ParseOptions
+                {
+                    IncludingSeconds = includeSeconds
+                });
         }
     }
 }
