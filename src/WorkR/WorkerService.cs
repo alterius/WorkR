@@ -8,7 +8,7 @@ namespace WorkR
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {
-        private const string _logCategory = $"{nameof(WorkR)}.WorkerService";
+        private const string LogCategory = $"{nameof(WorkR)}.WorkerService";
 
         private readonly Guid _workerServiceId = Guid.NewGuid();
         private readonly IServiceProvider _serviceProvider;
@@ -30,7 +30,7 @@ namespace WorkR
             _serviceProvider = serviceProvider;
             _trigger = trigger;
             _workerPipeline = workerPipeline;
-            _logger = loggerFactory.CreateLogger(_logCategory);
+            _logger = loggerFactory.CreateLogger(LogCategory);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

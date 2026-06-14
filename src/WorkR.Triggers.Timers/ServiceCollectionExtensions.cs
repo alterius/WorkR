@@ -48,11 +48,9 @@ namespace WorkR.Triggers.Timers
             bool runOnStartup = false,
             bool cancelOnOverlap = false)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(schedule);
+            var cronTabSchedule = ScheduledTrigger.ParseSchedule(schedule, includeSeconds);
 
             services.TryAddSingleton(TimeProvider.System);
-
-            var cronTabSchedule = ScheduledTrigger.ParseSchedule(schedule, includeSeconds);
 
             return services.AddWorker(
                 sp => new ScheduledTrigger(
