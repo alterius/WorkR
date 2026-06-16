@@ -134,6 +134,22 @@ stages:
                 - script: dotnet nuget push "$(Pipeline.Workspace)/nuget-packages/release/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key $(NUGET_API_KEY) --skip-duplicate
                   displayName: Push to NuGet.org
 
+                - task: GitHubRelease@1
+                  displayName: Create GitHub release
+                  inputs:
+                    gitHubConnection: $(GitHubServiceConnection)
+                    repositoryName: alterius/WorkR
+                    action: create
+                    target: $(Build.SourceVersion)
+                    tagSource: userSpecifiedTag
+                    tag: $(Build.BuildNumber)
+                    title: $(Build.BuildNumber)
+                    isPreRelease: false
+                    addChangeLog: true
+                    changeLogCompareToRelease: lastFullRelease
+                    changeLogType: commitBased
+                    assets: ''
+
                 - script: |
                     curl -X POST \
                       -H "Authorization: Bearer $(System.AccessToken)" \
