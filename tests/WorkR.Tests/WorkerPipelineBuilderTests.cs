@@ -136,6 +136,42 @@ namespace WorkR.Tests
         }
 
         [Fact]
+        public void AddWorker_InnerTransform_WithFactory_DoesNotRegisterWorkerInServices()
+        {
+            var services = new ServiceCollection();
+
+            CreateBuilder(services)
+                .AddWorker<FakeTransformWorker, string>(_ => new FakeTransformWorker())
+                .AddWorker<FakeStringTransformWorker, int>(_ => new FakeStringTransformWorker())
+                .AddWorker(_ => new FakeIntTerminalWorker());
+
+            services.ShouldNotContain(d => d.ServiceType == typeof(FakeStringTransformWorker));
+        }
+
+        [Fact]
+        public async Task AddWorker_InnerTransform_WithFactory_InvokesFactoryPerExecution()
+        {
+            var services = new ServiceCollection();
+            var instances = 0;
+
+            var pipeline = CreateBuilder(services)
+                .AddWorker<FakeTransformWorker, string>(_ => new FakeTransformWorker())
+                .AddWorker<FakeStringTransformWorker, int>(_ =>
+                {
+                    instances++;
+                    return new FakeStringTransformWorker();
+                })
+                .AddWorker(_ => new FakeIntTerminalWorker());
+
+            await using var sp = services.BuildServiceProvider();
+            var run = pipeline.Build(sp);
+            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+
+            instances.ShouldBe(2);
+        }
+
+        [Fact]
         public void AddWorker_InnerTransform_WithLifetime_RegistersWorkerWithThatLifetime()
         {
             var services = new ServiceCollection();
@@ -229,6 +265,11 @@ namespace WorkR.Tests
         {
             public Task ExecuteAsync(string source, WorkerDelegate<int> next, CancellationToken cancellationToken) =>
                 next(0, cancellationToken);
+        }
+
+        private sealed class FakeIntTerminalWorker : IWorker<int>
+        {
+            public Task ExecuteAsync(int context, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         private sealed class RecordingMiddleware(Action onExecute) : IWorkerMiddleware
