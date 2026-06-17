@@ -13,23 +13,23 @@ namespace WorkR
         private readonly Guid _workerServiceId = Guid.NewGuid();
         private readonly IServiceProvider _serviceProvider;
         private readonly TTrigger _trigger;
-        private readonly WorkerPipelineBuilder<TContext> _workerPipeline;
+        private readonly WorkerPipelineBuilder<TContext> _pipelineBuilder;
         private readonly ILogger _logger;
 
         public WorkerService(
             IServiceProvider serviceProvider,
             TTrigger trigger,
-            WorkerPipelineBuilder<TContext> workerPipeline,
+            WorkerPipelineBuilder<TContext> pipelineBuilder,
             ILoggerFactory loggerFactory)
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
             ArgumentNullException.ThrowIfNull(trigger);
-            ArgumentNullException.ThrowIfNull(workerPipeline);
+            ArgumentNullException.ThrowIfNull(pipelineBuilder);
             ArgumentNullException.ThrowIfNull(loggerFactory);
 
             _serviceProvider = serviceProvider;
             _trigger = trigger;
-            _workerPipeline = workerPipeline;
+            _pipelineBuilder = pipelineBuilder;
             _logger = loggerFactory.CreateLogger(LogCategory);
         }
 
@@ -38,7 +38,7 @@ namespace WorkR
             var workerVersion = GetType().Assembly.GetName().Version!.ToString();
             var triggerName = TypeNameHelper.GetTypeDisplayName(typeof(TTrigger), fullName: false);
             var triggerVersion = typeof(TTrigger).Assembly.GetName().Version?.ToString() ?? "unknown";
-            var pipelineName = string.Join(" -> ", _workerPipeline.WorkerNames);
+            var pipelineName = string.Join(" -> ", _pipelineBuilder.WorkerNames);
 
             using var _ = _logger.BeginScope(
                 new Dictionary<string, object?>
@@ -53,7 +53,7 @@ namespace WorkR
             _logger.LogInformation("Worker service starting...");
 
             var pipeline = WithTelemetry(
-                _workerPipeline.Build(_serviceProvider),
+                _pipelineBuilder.Build(_serviceProvider),
                 workerVersion,
                 triggerName,
                 triggerVersion,
