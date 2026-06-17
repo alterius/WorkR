@@ -100,7 +100,7 @@ namespace WorkR
 
         internal IWorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
         {
-            return WorkerPipeline.Create<TIn>((value, ct) => _pipeline(serviceProvider, value, ct));
+            return new DelegateWorkerPipeline<TIn>((value, ct) => _pipeline(serviceProvider, value, ct));
         }
     }
 }
