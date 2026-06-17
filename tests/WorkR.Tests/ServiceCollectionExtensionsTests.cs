@@ -43,7 +43,7 @@ namespace WorkR.Tests
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
-            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+            public Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 Task.CompletedTask;
         }
 

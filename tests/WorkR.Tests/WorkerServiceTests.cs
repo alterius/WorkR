@@ -162,15 +162,15 @@ namespace WorkR.Tests
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
-            private readonly Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task> _execute;
+            private readonly Func<IWorkerPipeline<EmptyTriggerContext>, CancellationToken, Task> _execute;
 
             public FakeTrigger(
-                Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task>? execute = null)
+                Func<IWorkerPipeline<EmptyTriggerContext>, CancellationToken, Task>? execute = null)
             {
                 _execute = execute ?? ((_, _) => Task.CompletedTask);
             }
 
-            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+            public Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 _execute(workerPipeline, stoppingToken);
         }
 

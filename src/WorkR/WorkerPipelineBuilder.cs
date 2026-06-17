@@ -98,9 +98,9 @@ namespace WorkR
 
         internal IReadOnlyList<string> WorkerNames => _workerNames;
 
-        internal WorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
+        internal IWorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
         {
-            return (value, ct) => _pipeline(serviceProvider, value, ct);
+            return WorkerPipeline.Create<TIn>((value, ct) => _pipeline(serviceProvider, value, ct));
         }
     }
 }

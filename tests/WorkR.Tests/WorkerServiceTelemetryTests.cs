@@ -18,8 +18,8 @@ namespace WorkR.Tests
             var second = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             var service = Create(new FakeTrigger(async (next, ct) =>
             {
-                await next(first, ct);
-                await next(second, ct);
+                await next.ExecuteAsync(first, ct);
+                await next.ExecuteAsync(second, ct);
             }));
 
             await service.StartAsync(TestContext.Current.CancellationToken);
@@ -46,7 +46,7 @@ namespace WorkR.Tests
 
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             var service = Create(
-                new FakeTrigger((next, ct) => next(context, ct)),
+                new FakeTrigger((next, ct) => next.ExecuteAsync(context, ct)),
                 pipeline: new WorkerPipelineBuilder<EmptyTriggerContext>(
                     ["FakeWorker", "OtherFakeWorker"],
                     (_, _, _) => Task.CompletedTask));
@@ -69,7 +69,7 @@ namespace WorkR.Tests
 
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             var service = Create(
-                new FakeTrigger((next, ct) => next(context, ct)),
+                new FakeTrigger((next, ct) => next.ExecuteAsync(context, ct)),
                 pipeline: new WorkerPipelineBuilder<EmptyTriggerContext>(
                     ["GenericFakeWorker<string>"],
                     (_, _, _) => Task.CompletedTask));
@@ -97,7 +97,7 @@ namespace WorkR.Tests
                 {
                     try
                     {
-                        await next(context, ct);
+                        await next.ExecuteAsync(context, ct);
                     }
                     catch (Exception ex)
                     {
@@ -135,7 +135,7 @@ namespace WorkR.Tests
                 {
                     try
                     {
-                        await next(context, executionCts.Token);
+                        await next.ExecuteAsync(context, executionCts.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -168,7 +168,7 @@ namespace WorkR.Tests
             var executed = false;
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             var service = Create(
-                new FakeTrigger((next, ct) => next(context, ct)),
+                new FakeTrigger((next, ct) => next.ExecuteAsync(context, ct)),
                 pipeline: new WorkerPipelineBuilder<EmptyTriggerContext>(
                     ["FakeWorker"],
                     (_, _, _) =>
@@ -190,7 +190,7 @@ namespace WorkR.Tests
         {
             var provider = new FakeLoggerProvider();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
-            var service = Create(new FakeTrigger((next, ct) => next(context, ct)), loggerProvider: provider);
+            var service = Create(new FakeTrigger((next, ct) => next.ExecuteAsync(context, ct)), loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
@@ -213,7 +213,7 @@ namespace WorkR.Tests
         {
             var provider = new FakeLoggerProvider();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
-            var service = Create(new FakeTrigger((next, ct) => next(context, ct)), loggerProvider: provider);
+            var service = Create(new FakeTrigger((next, ct) => next.ExecuteAsync(context, ct)), loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
@@ -244,7 +244,7 @@ namespace WorkR.Tests
                 {
                     try
                     {
-                        await next(context, ct);
+                        await next.ExecuteAsync(context, ct);
                     }
                     catch (InvalidOperationException)
                     {
@@ -274,7 +274,7 @@ namespace WorkR.Tests
                 {
                     try
                     {
-                        await next(context, executionCts.Token);
+                        await next.ExecuteAsync(context, executionCts.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -332,15 +332,15 @@ namespace WorkR.Tests
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
-            private readonly Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task> _execute;
+            private readonly Func<IWorkerPipeline<EmptyTriggerContext>, CancellationToken, Task> _execute;
 
             public FakeTrigger(
-                Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task>? execute = null)
+                Func<IWorkerPipeline<EmptyTriggerContext>, CancellationToken, Task>? execute = null)
             {
                 _execute = execute ?? ((_, _) => Task.CompletedTask);
             }
 
-            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+            public Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 _execute(workerPipeline, stoppingToken);
         }
 

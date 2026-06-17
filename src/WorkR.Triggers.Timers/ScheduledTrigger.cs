@@ -46,7 +46,7 @@ namespace WorkR.Triggers.Timers
             _cancelOnOverlap = cancelOnOverlap;
         }
 
-        public async Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Scheduled trigger initialised with schedule {schedule} and runOnStartup {runOnStartup}", _schedule.ToString(), _runOnStartup);
 
@@ -59,7 +59,7 @@ namespace WorkR.Triggers.Timers
 
                 try
                 {
-                    await workerPipeline(context, executionToken).ConfigureAwait(false);
+                    await workerPipeline.ExecuteAsync(context, executionToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)
