@@ -169,6 +169,10 @@ var shared = new MyWorker();
 pipeline.AddWorker(_ => shared) // same instance every execution — must be thread-safe
 ```
 
+The factory owns the instance's lifetime — WorkR does not dispose workers it did not
+create. If your worker is `IDisposable`/`IAsyncDisposable`, either resolve it from `sp` so
+the container disposes it, or manage disposal yourself.
+
 ---
 
 ## Middleware
