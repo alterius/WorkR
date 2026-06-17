@@ -27,6 +27,7 @@ namespace WorkR
         }
 
         internal WorkerPipeline<TIn, TNext> Then<TWorker, TNext>(
+            Func<IServiceProvider, TWorker> workerFactory,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut, TNext>
         {
@@ -37,13 +38,19 @@ namespace WorkR
                 (sp, value, next, ct) => current(sp, value, (sp2, value2, ct2) =>
                     applyMiddleware((sp3, ct3) =>
                     {
-                        var worker = sp3.GetRequiredService<TWorker>();
+                        var worker = workerFactory(sp3);
                         return worker.ExecuteAsync(value2, (v, ct4) => next(sp3, v, ct4), ct3);
                     })(sp2, ct2), ct),
                 [.._workerTypes, typeof(TWorker)]);
         }
 
+        internal WorkerPipeline<TIn, TNext> Then<TWorker, TNext>(
+            Action<MiddlewarePipelineBuilder>? middleware = null)
+                where TWorker : IWorker<TOut, TNext> =>
+                    Then<TWorker, TNext>(sp => sp.GetRequiredService<TWorker>(), middleware);
+
         internal WorkerPipeline<TIn> Finally<TWorker>(
+            Func<IServiceProvider, TWorker> workerFactory,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut>
         {
@@ -54,11 +61,16 @@ namespace WorkR
                 (sp, value, ct) => current(sp, value, (sp2, value2, ct2) =>
                     applyMiddleware((sp3, ct3) =>
                     {
-                        var worker = sp3.GetRequiredService<TWorker>();
+                        var worker = workerFactory(sp3);
                         return worker.ExecuteAsync(value2, ct3);
                     })(sp2, ct2), ct),
                 [.._workerTypes, typeof(TWorker)]);
         }
+
+        internal WorkerPipeline<TIn> Finally<TWorker>(
+            Action<MiddlewarePipelineBuilder>? middleware = null)
+                where TWorker : IWorker<TOut> =>
+                    Finally(sp => sp.GetRequiredService<TWorker>(), middleware);
 
         private static Func<PipelineMiddlewareDelegate, PipelineMiddlewareDelegate> BuildMiddleware(
             Action<MiddlewarePipelineBuilder>? configure)

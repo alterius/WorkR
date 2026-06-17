@@ -34,23 +34,67 @@ namespace WorkR.Tests
         }
 
         [Fact]
-        public void AddWorker_Terminal_WithFactory_RegistersWorkerViaFactory()
+        public void AddWorker_Terminal_WithFactory_DoesNotRegisterWorkerInServices()
         {
             var services = new ServiceCollection();
 
             CreateBuilder(services).AddWorker(_ => new FakeTerminalWorker());
 
-            services.ShouldContain(d => d.ServiceType == typeof(FakeTerminalWorker));
+            services.ShouldNotContain(d => d.ServiceType == typeof(FakeTerminalWorker));
         }
 
         [Fact]
-        public void AddWorker_Transform_WithFactory_RegistersWorkerViaFactory()
+        public void AddWorker_Transform_WithFactory_DoesNotRegisterWorkerInServices()
         {
             var services = new ServiceCollection();
 
-            CreateBuilder(services).AddWorker<FakeTransformWorker, string>(_ => new FakeTransformWorker());
+            CreateBuilder(services)
+                .AddWorker<FakeTransformWorker, string>(_ => new FakeTransformWorker())
+                .AddWorker(_ => new FakeStringTerminalWorker());
 
-            services.ShouldContain(d => d.ServiceType == typeof(FakeTransformWorker));
+            services.ShouldNotContain(d => d.ServiceType == typeof(FakeTransformWorker));
+        }
+
+        [Fact]
+        public async Task AddWorker_Terminal_WithFactory_InvokesFactoryPerExecution()
+        {
+            var services = new ServiceCollection();
+            var instances = 0;
+
+            var pipeline = CreateBuilder(services).AddWorker(_ =>
+            {
+                instances++;
+                return new FakeTerminalWorker();
+            });
+
+            await using var sp = services.BuildServiceProvider();
+            var run = pipeline.Build(sp);
+            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+
+            instances.ShouldBe(2);
+        }
+
+        [Fact]
+        public async Task AddWorker_Transform_WithFactory_InvokesFactoryPerExecution()
+        {
+            var services = new ServiceCollection();
+            var instances = 0;
+
+            var pipeline = CreateBuilder(services)
+                .AddWorker<FakeTransformWorker, string>(_ =>
+                {
+                    instances++;
+                    return new FakeTransformWorker();
+                })
+                .AddWorker(_ => new FakeStringTerminalWorker());
+
+            await using var sp = services.BuildServiceProvider();
+            var run = pipeline.Build(sp);
+            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+
+            instances.ShouldBe(2);
         }
 
         [Fact]
@@ -106,6 +150,11 @@ namespace WorkR.Tests
         {
             public Task ExecuteAsync(EmptyTriggerContext source, WorkerDelegate<string> next, CancellationToken cancellationToken) =>
                 next("result", cancellationToken);
+        }
+
+        private sealed class FakeStringTerminalWorker : IWorker<string>
+        {
+            public Task ExecuteAsync(string context, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         private sealed class RecordingMiddleware(Action onExecute) : IWorkerMiddleware

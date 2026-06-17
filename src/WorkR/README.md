@@ -133,7 +133,12 @@ builder.Services.AddWorker<MyTrigger, EmptyTriggerContext>(
 
 ## Worker Lifetime
 
-Workers are registered with the DI container automatically. The default lifetime is `Transient`:
+There are two ways to add a worker to a pipeline.
+
+### By type (DI-registered)
+
+The worker type is registered with the DI container automatically and resolved per
+execution. The default lifetime is `Transient`:
 
 ```csharp
 // Override lifetime
@@ -141,6 +146,27 @@ pipeline.AddWorker<MyWorker>(ServiceLifetime.Scoped)
 
 // Skip registration (if already registered elsewhere)
 pipeline.AddWorker<MyWorker>(lifetime: null)
+```
+
+### By factory (not DI-registered)
+
+Pass a factory to control construction yourself. The worker is **not** registered with
+the DI container, and the factory is invoked **once per execution** — giving you a fresh
+instance each run by default:
+
+```csharp
+// A new instance is built for every execution
+pipeline.AddWorker(sp => new MyWorker(sp.GetRequiredService<IDependency>()))
+```
+
+Because the factory is keyed to this position in the pipeline rather than to the worker
+type, the same worker type can be added to multiple pipelines (or multiple times in one
+pipeline) with independent construction. If you want a single instance shared across
+executions, capture it in the closure and return it:
+
+```csharp
+var shared = new MyWorker();
+pipeline.AddWorker(_ => shared) // same instance every execution — must be thread-safe
 ```
 
 ---

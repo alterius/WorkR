@@ -35,10 +35,9 @@ namespace WorkR
 
         public WorkerPipelineBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
             Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TContext, TOut> =>
-                    _builder.AddWorker<TWorker, TOut>(factory, lifetime, ResolveMiddleware(middleware));
+                    _builder.AddWorker<TWorker, TOut>(factory, ResolveMiddleware(middleware));
 
         public WorkerPipeline<TContext> AddWorker<TWorker>(
             ServiceLifetime? lifetime = ServiceLifetime.Transient,
@@ -48,10 +47,9 @@ namespace WorkR
 
         public WorkerPipeline<TContext> AddWorker<TWorker>(
             Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TContext> =>
-                    _builder.AddWorker(factory, lifetime, ResolveMiddleware(middleware));
+                    _builder.AddWorker(factory, ResolveMiddleware(middleware));
 
         private Action<MiddlewarePipelineBuilder>? ResolveMiddleware(Action<MiddlewarePipelineBuilder>? middleware)
         {
@@ -102,12 +100,10 @@ namespace WorkR
 
         public WorkerPipelineBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
             Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut, TNext>
         {
-            RegisterFactory(factory, lifetime);
-            var builder = _pipeline.Then<TWorker, TNext>(middleware);
+            var builder = _pipeline.Then<TWorker, TNext>(factory, middleware);
             return new WorkerPipelineBuilder<TTrigger, TContext, TNext>(_services, builder);
         }
 
@@ -122,19 +118,10 @@ namespace WorkR
 
         public WorkerPipeline<TContext> AddWorker<TWorker>(
             Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
             Action<MiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut>
         {
-            RegisterFactory(factory, lifetime);
-            return _pipeline.Finally<TWorker>(middleware);
-        }
-
-        private void RegisterFactory<TWorker>(Func<IServiceProvider, TWorker> factory, ServiceLifetime lifetime)
-            where TWorker : notnull
-        {
-            var descriptor = ServiceDescriptor.Describe(typeof(TWorker), sp => factory(sp), lifetime);
-            _services.TryAdd(descriptor);
+            return _pipeline.Finally(factory, middleware);
         }
 
         private void TryRegister<TWorker>(ServiceLifetime? lifetime)
