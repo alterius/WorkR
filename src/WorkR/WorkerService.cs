@@ -10,25 +10,21 @@ namespace WorkR
         private const string LogCategory = $"{nameof(WorkR)}.WorkerService";
 
         private readonly Guid _workerServiceId = Guid.NewGuid();
-        private readonly IServiceProvider _serviceProvider;
         private readonly TTrigger _trigger;
-        private readonly WorkerPipelineBuilder<TContext> _pipelineBuilder;
+        private readonly IWorkerPipeline<TContext> _pipeline;
         private readonly ILogger _logger;
 
         public WorkerService(
-            IServiceProvider serviceProvider,
             TTrigger trigger,
-            WorkerPipelineBuilder<TContext> pipelineBuilder,
+            IWorkerPipeline<TContext> pipeline,
             ILoggerFactory loggerFactory)
         {
-            ArgumentNullException.ThrowIfNull(serviceProvider);
             ArgumentNullException.ThrowIfNull(trigger);
-            ArgumentNullException.ThrowIfNull(pipelineBuilder);
+            ArgumentNullException.ThrowIfNull(pipeline);
             ArgumentNullException.ThrowIfNull(loggerFactory);
 
-            _serviceProvider = serviceProvider;
             _trigger = trigger;
-            _pipelineBuilder = pipelineBuilder;
+            _pipeline = pipeline;
             _logger = loggerFactory.CreateLogger(LogCategory);
         }
 
@@ -37,7 +33,6 @@ namespace WorkR
             var workerVersion = GetType().Assembly.GetName().Version!.ToString();
             var triggerName = TypeNameHelper.GetTypeDisplayName(typeof(TTrigger), fullName: false);
             var triggerVersion = typeof(TTrigger).Assembly.GetName().Version?.ToString() ?? "unknown";
-            var pipelineName = string.Join(" -> ", _pipelineBuilder.WorkerNames);
 
             using var _ = _logger.BeginScope(
                 new Dictionary<string, object?>
@@ -46,19 +41,18 @@ namespace WorkR
                     ["WorkerServiceId"] = _workerServiceId,
                     ["Trigger"] = triggerName,
                     ["TriggerVersion"] = triggerVersion,
-                    ["WorkerPipeline"] = pipelineName
+                    ["WorkerPipeline"] = _pipeline.Name
                 });
 
             _logger.LogInformation("Worker service starting...");
 
             var pipeline = new TelemetryWorkerPipeline<TContext>(
-                _pipelineBuilder.Build(_serviceProvider),
+                _pipeline,
                 _logger,
                 _workerServiceId,
                 workerVersion,
                 triggerName,
-                triggerVersion,
-                pipelineName);
+                triggerVersion);
 
             _logger.LogInformation("Worker service started");
 

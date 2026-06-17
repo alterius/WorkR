@@ -26,9 +26,8 @@ namespace WorkR
 
             return services.AddSingleton<IHostedService>(sp =>
                 new WorkerService<TTrigger, TContext>(
-                    sp,
                     triggerFactory(sp),
-                    pipeline,
+                    pipeline.Build(sp),
                     sp.GetRequiredService<ILoggerFactory>()));
         }
     }
