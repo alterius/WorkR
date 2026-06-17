@@ -28,47 +28,52 @@ namespace WorkR
         internal WorkerPipelineBuilder<TIn, TNext> Then<TNext>(
             string name,
             WorkerPipelineStage<TOut, TNext> step,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
         {
             ArgumentNullException.ThrowIfNull(name);
             ArgumentNullException.ThrowIfNull(step);
 
-            var current = _pipeline;
-            var applyMiddleware = BuildMiddleware(middleware);
+            var mw = WithMiddleware(middleware);
 
             return new WorkerPipelineBuilder<TIn, TNext>(
                 [.._workerNames, name],
                 (sp, value, next, ct) =>
-                    current(sp, value, (sp2, value2, ct2) =>
-                        applyMiddleware((sp3, ct3) =>
-                            step(sp3, value2, next, ct3))(sp2, ct2), ct));
+                    _pipeline(sp, value, (sp2, value2, ct2) =>
+                        mw(sp2, (sp3, ct3) =>
+                            step(sp3, value2, next, ct3), ct2),
+                        ct));
         }
 
         internal WorkerPipelineBuilder<TIn> Finally(
             string name,
             WorkerPipelineStage<TOut> step,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
         {
             ArgumentNullException.ThrowIfNull(name);
             ArgumentNullException.ThrowIfNull(step);
 
-            var current = _pipeline;
-            var applyMiddleware = BuildMiddleware(middleware);
+            var mw = WithMiddleware(middleware);
 
             return new WorkerPipelineBuilder<TIn>(
                 [.._workerNames, name],
                 (sp, value, ct) =>
-                    current(sp, value, (sp2, value2, ct2) =>
-                        applyMiddleware((sp3, ct3) =>
-                            step(sp3, value2, ct3))(sp2, ct2), ct));
+                    _pipeline(sp, value, (sp2, value2, ct2) =>
+                        mw(sp2, (sp3, ct3) =>
+                            step(sp3, value2, ct3), ct2),
+                        ct));
         }
 
-        private static Func<PipelineMiddlewareDelegate, PipelineMiddlewareDelegate> BuildMiddleware(
-            Action<MiddlewarePipelineBuilder>? configure)
+        private static WorkerMiddlewarePipeline WithMiddleware(
+            Action<WorkerMiddlewarePipelineBuilder>? middleware)
         {
-            var builder = new MiddlewarePipelineBuilder();
-            configure?.Invoke(builder);
-            return builder.Build;
+            if (middleware is null)
+            {
+                return static (sp, step, ct) => step(sp, ct);
+            }
+
+            var builder = new WorkerMiddlewarePipelineBuilder();
+            middleware(builder);
+            return builder.Build();
         }
     }
 

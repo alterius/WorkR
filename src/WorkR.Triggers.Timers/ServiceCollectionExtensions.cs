@@ -31,7 +31,7 @@ namespace WorkR.Triggers.Timers
             TimeSpan delay,
             bool runOnStartup = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
         {
             return services.AddDelayWorker(
@@ -71,7 +71,7 @@ namespace WorkR.Triggers.Timers
             bool runOnStartup = false,
             bool cancelOnOverlap = false,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
         {
             return services.AddScheduledWorker(

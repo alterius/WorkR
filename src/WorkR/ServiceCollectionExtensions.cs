@@ -11,7 +11,7 @@ namespace WorkR
             this IServiceCollection services,
             Func<IServiceProvider, TTrigger> triggerFactory,
             WorkerRegistration<TTrigger, TContext> builder,
-            Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
+            Action<WorkerMiddlewarePipelineBuilder>? defaultMiddleware = null)
                 where TTrigger : ITrigger<TContext>
                 where TContext : TriggerContext
         {

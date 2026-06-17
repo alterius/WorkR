@@ -88,7 +88,7 @@ namespace WorkR.Tests
 
         private static WorkerRegistrationBuilder<FakeTrigger, EmptyTriggerContext> CreateBuilder(
             IServiceCollection services,
-            Action<MiddlewarePipelineBuilder>? defaultMiddleware = null) =>
+            Action<WorkerMiddlewarePipelineBuilder>? defaultMiddleware = null) =>
             new(services, WorkerPipelineBuilder.Create<EmptyTriggerContext>(), defaultMiddleware);
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>

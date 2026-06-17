@@ -8,7 +8,7 @@ namespace WorkR.Triggers.AzureServiceBus
 {
     public static class ServiceCollectionExtensions
     {
-        private static readonly Action<MiddlewarePipelineBuilder> _defaultMiddleware = static mw =>
+        private static readonly Action<WorkerMiddlewarePipelineBuilder> _defaultMiddleware = static mw =>
             mw.UseScope();
 
         public static IServiceCollection AddServiceBusWorker(
@@ -40,7 +40,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null,
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null,
             Action<ServiceBusProcessorOptions>? configure = null)
                 where TWorker : IWorker<ServiceBusTriggerContext>
         {
@@ -84,7 +84,7 @@ namespace WorkR.Triggers.AzureServiceBus
             string topicName,
             string subscriptionName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null,
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null,
             Action<ServiceBusProcessorOptions>? configure = null)
                 where TWorker : IWorker<ServiceBusTriggerContext>
         {
@@ -127,7 +127,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null,
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null,
             Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<ServiceBusTriggerContext<T>>
@@ -175,7 +175,7 @@ namespace WorkR.Triggers.AzureServiceBus
             string topicName,
             string subscriptionName,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null,
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null,
             Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
                 where TWorker : IWorker<ServiceBusTriggerContext<T>>

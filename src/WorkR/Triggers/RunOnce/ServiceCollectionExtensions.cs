@@ -25,7 +25,7 @@ namespace WorkR.Triggers.RunOnce
         public static IServiceCollection AddRunOnceWorker<TWorker>(
             this IServiceCollection services,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
+            Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<EmptyTriggerContext>
         {
             return services.AddRunOnceWorker(

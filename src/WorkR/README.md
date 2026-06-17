@@ -147,7 +147,7 @@ pipeline.AddWorker<MyWorker>(lifetime: null)
 
 ## Middleware
 
-Middleware is configured per worker step using `MiddlewarePipelineBuilder`. It wraps worker execution and is applied in registration order (outermost first).
+Middleware is configured per worker step using `WorkerMiddlewarePipelineBuilder`. It wraps worker execution and is applied in registration order (outermost first).
 
 ### `UseScope`
 

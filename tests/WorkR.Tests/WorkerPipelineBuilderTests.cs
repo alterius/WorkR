@@ -6,7 +6,7 @@ namespace WorkR.Tests
     [Trait("Category", "L0")]
     public class WorkerPipelineBuilderTests
     {
-        // WorkerPipeline<TIn> — public class, internal constructor
+        // WorkerPipelineBuilder<TIn> — public class, internal constructor
 
         [Fact]
         public void WorkerPipelineFinal_Constructor_WhenPipelineIsNull_ThrowsArgumentNullException()
@@ -91,7 +91,7 @@ namespace WorkR.Tests
             captured.ShouldBe("hello");
         }
 
-        // WorkerPipeline<TIn, TOut> — internal class, internal constructor
+        // WorkerPipelineBuilder<TIn, TOut> — internal class, internal constructor
 
         [Fact]
         public void WorkerPipelineIntermediate_Constructor_WhenPipelineIsNull_ThrowsArgumentNullException()
@@ -100,7 +100,7 @@ namespace WorkR.Tests
                 new WorkerPipelineBuilder<string, string>([], null!));
         }
 
-        // WorkerPipeline.Create / Then / Finally — pipeline composition from step delegates
+        // WorkerPipelineBuilder.Create / Then / Finally — pipeline composition from step delegates
 
         [Fact]
         public async Task Create_ProducesPassthroughPipeline()
