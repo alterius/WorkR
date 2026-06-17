@@ -28,12 +28,12 @@ namespace WorkR
 
             _inner = inner;
             _logger = logger;
-            _workerServiceId = workerServiceId;
-            _workerVersion = workerVersion;
-            _triggerName = triggerName;
-            _triggerVersion = triggerVersion;
             _pipelineName = inner.Name;
             _spanName = $"EXECUTE {inner.Name}";
+            _workerVersion = workerVersion;
+            _workerServiceId = workerServiceId;
+            _triggerName = triggerName;
+            _triggerVersion = triggerVersion;
         }
 
         public async Task ExecuteAsync(TContext value, CancellationToken cancellationToken)
