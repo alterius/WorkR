@@ -8,6 +8,7 @@ namespace WorkR
     {
         private readonly IWorkerPipeline<TContext> _inner;
         private readonly ILogger _logger;
+        private readonly string _pipelineName;
         private readonly string _spanName;
         private readonly string _workerVersion;
         private readonly Guid _workerServiceId;
@@ -15,7 +16,7 @@ namespace WorkR
         private readonly string _triggerVersion;
 
         internal TelemetryWorkerPipeline(
-            IWorkerPipeline<TContext> inner,
+            INamedWorkerPipeline<TContext> inner,
             ILogger logger,
             Guid workerServiceId,
             string workerVersion,
@@ -31,10 +32,9 @@ namespace WorkR
             _workerVersion = workerVersion;
             _triggerName = triggerName;
             _triggerVersion = triggerVersion;
+            _pipelineName = inner.Name;
             _spanName = $"EXECUTE {inner.Name}";
         }
-
-        public string Name => _inner.Name;
 
         public async Task ExecuteAsync(TContext value, CancellationToken cancellationToken)
         {
@@ -46,7 +46,7 @@ namespace WorkR
                 activity.SetTag("workr.service.id", _workerServiceId);
                 activity.SetTag("workr.trigger", _triggerName);
                 activity.SetTag("workr.trigger.version", _triggerVersion);
-                activity.SetTag("workr.pipeline", Name);
+                activity.SetTag("workr.pipeline", _pipelineName);
                 activity.SetTag("workr.execution.id", value.ExecutionId);
             }
 

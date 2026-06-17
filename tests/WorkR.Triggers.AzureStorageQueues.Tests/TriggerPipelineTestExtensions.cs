@@ -16,8 +16,6 @@ namespace WorkR
             public DelegatePipeline(Func<TIn, CancellationToken, Task> pipeline) =>
                 _pipeline = pipeline;
 
-            public string Name => "TestPipeline";
-
             public Task ExecuteAsync(TIn value, CancellationToken cancellationToken) =>
                 _pipeline(value, cancellationToken);
         }

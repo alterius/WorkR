@@ -1,6 +1,6 @@
 namespace WorkR
 {
-    internal sealed class DelegateWorkerPipeline<TIn> : IWorkerPipeline<TIn>
+    internal sealed class DelegateWorkerPipeline<TIn> : INamedWorkerPipeline<TIn>
     {
         private readonly string _name;
         private readonly Func<TIn, CancellationToken, Task> _pipeline;

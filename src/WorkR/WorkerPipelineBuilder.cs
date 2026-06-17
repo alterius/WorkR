@@ -96,7 +96,7 @@ namespace WorkR
             _workerNames = workerNames;
         }
 
-        internal IWorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
+        internal INamedWorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
         {
             return new DelegateWorkerPipeline<TIn>(
                 string.Join(" -> ", _workerNames),

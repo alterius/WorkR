@@ -11,12 +11,12 @@ namespace WorkR
 
         private readonly Guid _workerServiceId = Guid.NewGuid();
         private readonly TTrigger _trigger;
-        private readonly IWorkerPipeline<TContext> _pipeline;
+        private readonly INamedWorkerPipeline<TContext> _pipeline;
         private readonly ILogger _logger;
 
         public WorkerService(
             TTrigger trigger,
-            IWorkerPipeline<TContext> pipeline,
+            INamedWorkerPipeline<TContext> pipeline,
             ILoggerFactory loggerFactory)
         {
             ArgumentNullException.ThrowIfNull(trigger);
