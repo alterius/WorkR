@@ -49,7 +49,7 @@ namespace WorkR.Tests
                 new FakeTrigger((next, ct) => next(context, ct)),
                 pipeline: new WorkerPipeline<EmptyTriggerContext>(
                     (_, _, _) => Task.CompletedTask,
-                    [typeof(FakeWorker), typeof(OtherFakeWorker)]));
+                    ["FakeWorker", "OtherFakeWorker"]));
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
@@ -72,7 +72,7 @@ namespace WorkR.Tests
                 new FakeTrigger((next, ct) => next(context, ct)),
                 pipeline: new WorkerPipeline<EmptyTriggerContext>(
                     (_, _, _) => Task.CompletedTask,
-                    [typeof(GenericFakeWorker<string>)]));
+                    ["GenericFakeWorker<string>"]));
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
@@ -105,7 +105,7 @@ namespace WorkR.Tests
                     }
                 }),
                 pipeline: new WorkerPipeline<EmptyTriggerContext>(
-                    (_, _, _) => throw new InvalidOperationException("boom"), [typeof(FakeWorker)]));
+                    (_, _, _) => throw new InvalidOperationException("boom"), ["FakeWorker"]));
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
@@ -145,7 +145,7 @@ namespace WorkR.Tests
                     executionCts.Cancel();
                     ct.ThrowIfCancellationRequested();
                     return Task.CompletedTask;
-                }, [typeof(FakeWorker)]));
+                }, ["FakeWorker"]));
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
@@ -171,7 +171,7 @@ namespace WorkR.Tests
                     observed = Activity.Current;
                     executed = true;
                     return Task.CompletedTask;
-                }, [typeof(FakeWorker)]));
+                }, ["FakeWorker"]));
 
             await service.StartAsync(TestContext.Current.CancellationToken);
             await service.ExecuteTask!;
@@ -247,7 +247,7 @@ namespace WorkR.Tests
                 }),
                 pipeline: new WorkerPipeline<EmptyTriggerContext>(
                     (_, _, _) => throw new InvalidOperationException("boom"),
-                    [typeof(FakeWorker)]),
+                    ["FakeWorker"]),
                 loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
@@ -280,7 +280,7 @@ namespace WorkR.Tests
                     executionCts.Cancel();
                     ct.ThrowIfCancellationRequested();
                     return Task.CompletedTask;
-                }, [typeof(FakeWorker)]),
+                }, ["FakeWorker"]),
                 loggerProvider: provider);
 
             await service.StartAsync(TestContext.Current.CancellationToken);
@@ -314,7 +314,7 @@ namespace WorkR.Tests
             FakeLoggerProvider? loggerProvider = null) =>
             new(EmptyServiceProvider.Instance,
                 trigger ?? new FakeTrigger(),
-                pipeline ?? new WorkerPipeline<EmptyTriggerContext>((_, _, _) => Task.CompletedTask, [typeof(FakeWorker)]),
+                pipeline ?? new WorkerPipeline<EmptyTriggerContext>((_, _, _) => Task.CompletedTask, ["FakeWorker"]),
                 new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
 
         private sealed class EmptyServiceProvider : IServiceProvider

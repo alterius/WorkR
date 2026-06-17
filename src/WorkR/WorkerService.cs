@@ -38,7 +38,7 @@ namespace WorkR
             var workerVersion = GetType().Assembly.GetName().Version!.ToString();
             var triggerName = TypeNameHelper.GetTypeDisplayName(typeof(TTrigger), fullName: false);
             var triggerVersion = typeof(TTrigger).Assembly.GetName().Version?.ToString() ?? "unknown";
-            var pipelineName = string.Join(" -> ", _workerPipeline.WorkerTypes.Select(t => TypeNameHelper.GetTypeDisplayName(t, fullName: false)));
+            var pipelineName = string.Join(" -> ", _workerPipeline.WorkerNames);
 
             using var _ = _logger.BeginScope(
                 new Dictionary<string, object?>

@@ -151,7 +151,7 @@ namespace WorkR.Tests
             new LoggerFactory([new FakeLoggerProvider()]);
 
         private static WorkerPipeline<EmptyTriggerContext> MakePipeline() =>
-            new((_, _, _) => Task.CompletedTask, [typeof(FakeWorker)]);
+            new((_, _, _) => Task.CompletedTask, ["FakeWorker"]);
 
         private sealed class EmptyServiceProvider : IServiceProvider
         {

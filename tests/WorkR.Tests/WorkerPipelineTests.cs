@@ -16,27 +16,27 @@ namespace WorkR.Tests
         }
 
         [Fact]
-        public void WorkerPipelineFinal_Constructor_WhenWorkerTypesIsNull_ThrowsArgumentNullException()
+        public void WorkerPipelineFinal_Constructor_WhenWorkerNamesIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerPipeline<string>((_, _, _) => Task.CompletedTask, null!));
         }
 
         [Fact]
-        public void WorkerPipelineFinal_Constructor_WhenWorkerTypesIsEmpty_ThrowsArgumentException()
+        public void WorkerPipelineFinal_Constructor_WhenWorkerNamesIsEmpty_ThrowsArgumentException()
         {
             Should.Throw<ArgumentException>(() =>
                 new WorkerPipeline<string>((_, _, _) => Task.CompletedTask, []));
         }
 
         [Fact]
-        public void WorkerPipelineFinal_WorkerTypes_ExposesProvidedTypes()
+        public void WorkerPipelineFinal_WorkerNames_ExposesProvidedNames()
         {
             var pipeline = new WorkerPipeline<string>(
                 (_, _, _) => Task.CompletedTask,
-                [typeof(UpperCaseWorker), typeof(CapturingWorker)]);
+                ["UpperCaseWorker", "CapturingWorker"]);
 
-            pipeline.WorkerTypes.ShouldBe([typeof(UpperCaseWorker), typeof(CapturingWorker)]);
+            pipeline.WorkerNames.ShouldBe(["UpperCaseWorker", "CapturingWorker"]);
         }
 
         [Fact]
@@ -47,7 +47,7 @@ namespace WorkR.Tests
             {
                 called = true;
                 return Task.CompletedTask;
-            }, [typeof(CapturingWorker)]);
+            }, ["CapturingWorker"]);
 
             await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
 
@@ -63,7 +63,7 @@ namespace WorkR.Tests
             {
                 captured = serviceProvider;
                 return Task.CompletedTask;
-            }, [typeof(CapturingWorker)]);
+            }, ["CapturingWorker"]);
 
             await pipeline.Build(sp).Invoke("hello", TestContext.Current.CancellationToken);
 
@@ -78,7 +78,7 @@ namespace WorkR.Tests
             {
                 captured = value;
                 return Task.CompletedTask;
-            }, [typeof(CapturingWorker)]);
+            }, ["CapturingWorker"]);
 
             await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
 
@@ -94,84 +94,83 @@ namespace WorkR.Tests
                 new WorkerPipeline<string, string>(null!, []));
         }
 
-        // WorkerPipeline.Create / Then / Finally — pipeline composition
+        // WorkerPipeline.Create / Then / Finally — pipeline composition from step delegates
 
         [Fact]
         public async Task Create_ProducesPassthroughPipeline()
         {
-            await using var sp = new ServiceCollection()
-                .AddSingleton<CapturingWorker>()
-                .BuildServiceProvider();
+            string? captured = null;
 
             var del = WorkerPipeline.Create<string>()
-                .Finally<CapturingWorker>()
-                .Build(sp);
+                .Finally("capture", (sp, value, ct) =>
+                {
+                    captured = value;
+                    return Task.CompletedTask;
+                })
+                .Build(null!);
 
             await del("hello", TestContext.Current.CancellationToken);
 
-            sp.GetRequiredService<CapturingWorker>().Captured.ShouldBe("hello");
+            captured.ShouldBe("hello");
         }
 
         [Fact]
         public async Task Then_TransformsValueBeforeNextStage()
         {
-            await using var sp = new ServiceCollection()
-                .AddTransient<UpperCaseWorker>()
-                .AddSingleton<CapturingWorker>()
-                .BuildServiceProvider();
+            string? captured = null;
 
             var del = WorkerPipeline.Create<string>()
-                .Then<UpperCaseWorker, string>()
-                .Finally<CapturingWorker>()
-                .Build(sp);
+                .Then<string>("upper", (sp, value, next, ct) => next(sp, value.ToUpper(), ct))
+                .Finally("capture", (sp, value, ct) =>
+                {
+                    captured = value;
+                    return Task.CompletedTask;
+                })
+                .Build(null!);
 
             await del("hello", TestContext.Current.CancellationToken);
 
-            sp.GetRequiredService<CapturingWorker>().Captured.ShouldBe("HELLO");
+            captured.ShouldBe("HELLO");
         }
 
         [Fact]
-        public async Task Finally_CallsTerminalWorkerWithValue()
+        public async Task Finally_CallsTerminalStepWithValue()
         {
-            await using var sp = new ServiceCollection()
-                .AddTransient<UpperCaseWorker>()
-                .AddSingleton<CapturingWorker>()
-                .BuildServiceProvider();
+            string? captured = null;
 
             var del = WorkerPipeline.Create<string>()
-                .Then<UpperCaseWorker, string>()
-                .Finally<CapturingWorker>()
-                .Build(sp);
+                .Finally("capture", (sp, value, ct) =>
+                {
+                    captured = value;
+                    return Task.CompletedTask;
+                })
+                .Build(null!);
 
             await del("world", TestContext.Current.CancellationToken);
 
-            sp.GetRequiredService<CapturingWorker>().Captured.ShouldBe("WORLD");
+            captured.ShouldBe("world");
         }
 
         [Fact]
-        public void Compose_RecordsWorkerTypesInPipelineOrder()
+        public void Compose_RecordsWorkerNamesInPipelineOrder()
         {
             var pipeline = WorkerPipeline.Create<string>()
-                .Then<UpperCaseWorker, string>()
-                .Finally<CapturingWorker>();
+                .Then<string>("upper", (sp, value, next, ct) => next(sp, value, ct))
+                .Finally("capture", (sp, value, ct) => Task.CompletedTask);
 
-            pipeline.WorkerTypes.ShouldBe([typeof(UpperCaseWorker), typeof(CapturingWorker)]);
+            pipeline.WorkerNames.ShouldBe(["upper", "capture"]);
         }
 
         [Fact]
-        public async Task Then_AppliesMiddlewareAroundWorker()
+        public async Task Then_AppliesMiddlewareAroundStep()
         {
             var middlewareCalled = false;
-            await using var sp = new ServiceCollection()
-                .AddTransient<UpperCaseWorker>()
-                .AddSingleton<CapturingWorker>()
-                .BuildServiceProvider();
 
             var del = WorkerPipeline.Create<string>()
-                .Then<UpperCaseWorker, string>(mw =>
-                    mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
-                .Finally<CapturingWorker>()
-                .Build(sp);
+                .Then<string>("upper", (sp, value, next, ct) => next(sp, value, ct),
+                    mw => mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
+                .Finally("capture", (sp, value, ct) => Task.CompletedTask)
+                .Build(null!);
 
             await del("hello", TestContext.Current.CancellationToken);
 
@@ -179,38 +178,18 @@ namespace WorkR.Tests
         }
 
         [Fact]
-        public async Task Finally_AppliesMiddlewareAroundWorker()
+        public async Task Finally_AppliesMiddlewareAroundStep()
         {
             var middlewareCalled = false;
-            await using var sp = new ServiceCollection()
-                .AddSingleton<CapturingWorker>()
-                .BuildServiceProvider();
 
             var del = WorkerPipeline.Create<string>()
-                .Finally<CapturingWorker>(mw =>
-                    mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
-                .Build(sp);
+                .Finally("capture", (sp, value, ct) => Task.CompletedTask,
+                    mw => mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
+                .Build(null!);
 
             await del("hello", TestContext.Current.CancellationToken);
 
             middlewareCalled.ShouldBeTrue();
-        }
-
-        private sealed class UpperCaseWorker : IWorker<string, string>
-        {
-            public Task ExecuteAsync(string source, WorkerDelegate<string> next, CancellationToken cancellationToken) =>
-                next(source.ToUpper(), cancellationToken);
-        }
-
-        private sealed class CapturingWorker : IWorker<string>
-        {
-            public string? Captured { get; private set; }
-
-            public Task ExecuteAsync(string source, CancellationToken cancellationToken)
-            {
-                Captured = source;
-                return Task.CompletedTask;
-            }
         }
 
         private sealed class CallbackMiddleware : IWorkerMiddleware

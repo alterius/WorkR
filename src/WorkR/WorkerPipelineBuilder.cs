@@ -96,8 +96,7 @@ namespace WorkR
                 where TWorker : IWorker<TOut, TNext>
         {
             TryRegister<TWorker>(lifetime);
-            var builder = _pipeline.Then<TWorker, TNext>(middleware);
-            return new WorkerPipelineBuilder<TTrigger, TContext, TNext>(_services, builder);
+            return Then<TWorker, TNext>(sp => sp.GetRequiredService<TWorker>(), middleware);
         }
 
         public WorkerPipelineBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
@@ -107,8 +106,7 @@ namespace WorkR
                 where TWorker : IWorker<TOut, TNext>
         {
             RegisterFactory(factory, lifetime);
-            var builder = _pipeline.Then<TWorker, TNext>(middleware);
-            return new WorkerPipelineBuilder<TTrigger, TContext, TNext>(_services, builder);
+            return Then<TWorker, TNext>(factory, middleware);
         }
 
         public WorkerPipeline<TContext> AddWorker<TWorker>(
@@ -117,7 +115,7 @@ namespace WorkR
                 where TWorker : IWorker<TOut>
         {
             TryRegister<TWorker>(lifetime);
-            return _pipeline.Finally<TWorker>(middleware);
+            return Finally<TWorker>(sp => sp.GetRequiredService<TWorker>(), middleware);
         }
 
         public WorkerPipeline<TContext> AddWorker<TWorker>(
@@ -127,8 +125,32 @@ namespace WorkR
                 where TWorker : IWorker<TOut>
         {
             RegisterFactory(factory, lifetime);
-            return _pipeline.Finally<TWorker>(middleware);
+            return Finally<TWorker>(factory, middleware);
         }
+
+        private WorkerPipelineBuilder<TTrigger, TContext, TNext> Then<TWorker, TNext>(
+            Func<IServiceProvider, TWorker> workerFactory,
+            Action<MiddlewarePipelineBuilder>? middleware)
+                where TWorker : IWorker<TOut, TNext>
+        {
+            var builder = _pipeline.Then<TNext>(
+                WorkerName<TWorker>(),
+                (sp, value, next, ct) => workerFactory(sp).ExecuteAsync(value, (v, ct2) => next(sp, v, ct2), ct),
+                middleware);
+            return new WorkerPipelineBuilder<TTrigger, TContext, TNext>(_services, builder);
+        }
+
+        private WorkerPipeline<TContext> Finally<TWorker>(
+            Func<IServiceProvider, TWorker> workerFactory,
+            Action<MiddlewarePipelineBuilder>? middleware)
+                where TWorker : IWorker<TOut> =>
+                    _pipeline.Finally(
+                        WorkerName<TWorker>(),
+                        (sp, value, ct) => workerFactory(sp).ExecuteAsync(value, ct),
+                        middleware);
+
+        private static string WorkerName<TWorker>() =>
+            TypeNameHelper.GetTypeDisplayName(typeof(TWorker), fullName: false);
 
         private void RegisterFactory<TWorker>(Func<IServiceProvider, TWorker> factory, ServiceLifetime lifetime)
             where TWorker : notnull
