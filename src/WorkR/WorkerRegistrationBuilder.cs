@@ -125,7 +125,7 @@ namespace WorkR
         {
             var builder = _pipeline.Then<TNext>(
                 WorkerName<TWorker>(),
-                (sp, value, next, ct) => workerFactory(sp).ExecuteAsync(value, WorkerPipeline.Create<TNext>((v, ct2) => next(sp, v, ct2)), ct),
+                (sp, value, next, ct) => workerFactory(sp).ExecuteAsync(value, (v, ct2) => next(sp, v, ct2), ct),
                 middleware);
             return new WorkerPipelineBuilder<TTrigger, TContext, TNext>(_services, builder);
         }

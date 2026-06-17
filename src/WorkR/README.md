@@ -76,11 +76,11 @@ public class FetchWorker : IWorker<EmptyTriggerContext, IReadOnlyList<Order>>
 
     public async Task ExecuteAsync(
         EmptyTriggerContext context,
-        IWorkerPipeline<IReadOnlyList<Order>> next,
+        Worker<IReadOnlyList<Order>> next,
         CancellationToken cancellationToken)
     {
         var orders = await _repo.GetPendingAsync(cancellationToken);
-        await next.ExecuteAsync(orders, cancellationToken);
+        await next(orders, cancellationToken);
     }
 }
 

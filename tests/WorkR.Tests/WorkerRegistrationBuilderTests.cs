@@ -252,8 +252,8 @@ namespace WorkR.Tests
 
         private sealed class FakeTransformWorker : IWorker<EmptyTriggerContext, string>
         {
-            public Task ExecuteAsync(EmptyTriggerContext source, IWorkerPipeline<string> next, CancellationToken cancellationToken) =>
-                next.ExecuteAsync("result", cancellationToken);
+            public Task ExecuteAsync(EmptyTriggerContext source, Worker<string> next, CancellationToken cancellationToken) =>
+                next("result", cancellationToken);
         }
 
         private sealed class FakeStringTerminalWorker : IWorker<string>
@@ -263,8 +263,8 @@ namespace WorkR.Tests
 
         private sealed class FakeStringTransformWorker : IWorker<string, int>
         {
-            public Task ExecuteAsync(string source, IWorkerPipeline<int> next, CancellationToken cancellationToken) =>
-                next.ExecuteAsync(0, cancellationToken);
+            public Task ExecuteAsync(string source, Worker<int> next, CancellationToken cancellationToken) =>
+                next(0, cancellationToken);
         }
 
         private sealed class FakeIntTerminalWorker : IWorker<int>
