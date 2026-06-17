@@ -51,7 +51,7 @@ namespace WorkR.Tests
                     return Task.CompletedTask;
                 });
 
-            await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
+            await pipeline.Build(null!).ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             called.ShouldBeTrue();
         }
@@ -69,7 +69,7 @@ namespace WorkR.Tests
                     return Task.CompletedTask;
                 });
 
-            await pipeline.Build(sp).Invoke("hello", TestContext.Current.CancellationToken);
+            await pipeline.Build(sp).ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             captured.ShouldBeSameAs(sp);
         }
@@ -86,7 +86,7 @@ namespace WorkR.Tests
                     return Task.CompletedTask;
                 });
 
-            await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
+            await pipeline.Build(null!).ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             captured.ShouldBe("hello");
         }
@@ -115,7 +115,7 @@ namespace WorkR.Tests
                 })
                 .Build(null!);
 
-            await del("hello", TestContext.Current.CancellationToken);
+            await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             captured.ShouldBe("hello");
         }
@@ -134,7 +134,7 @@ namespace WorkR.Tests
                 })
                 .Build(null!);
 
-            await del("hello", TestContext.Current.CancellationToken);
+            await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             captured.ShouldBe("HELLO");
         }
@@ -152,7 +152,7 @@ namespace WorkR.Tests
                 })
                 .Build(null!);
 
-            await del("world", TestContext.Current.CancellationToken);
+            await del.ExecuteAsync("world", TestContext.Current.CancellationToken);
 
             captured.ShouldBe("world");
         }
@@ -178,7 +178,7 @@ namespace WorkR.Tests
                 .Finally("capture", (sp, value, ct) => Task.CompletedTask)
                 .Build(null!);
 
-            await del("hello", TestContext.Current.CancellationToken);
+            await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             middlewareCalled.ShouldBeTrue();
         }
@@ -193,7 +193,7 @@ namespace WorkR.Tests
                     mw => mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
                 .Build(null!);
 
-            await del("hello", TestContext.Current.CancellationToken);
+            await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             middlewareCalled.ShouldBeTrue();
         }

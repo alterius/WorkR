@@ -69,8 +69,8 @@ namespace WorkR.Tests
 
             await using var sp = services.BuildServiceProvider();
             var run = pipeline.Build(sp);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             instances.ShouldBe(2);
         }
@@ -91,8 +91,8 @@ namespace WorkR.Tests
 
             await using var sp = services.BuildServiceProvider();
             var run = pipeline.Build(sp);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             instances.ShouldBe(2);
         }
@@ -127,8 +127,8 @@ namespace WorkR.Tests
 
             await using var sp = services.BuildServiceProvider();
             var run = pipeline.Build(sp);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             instances.ShouldBe(2);
         }
@@ -211,7 +211,7 @@ namespace WorkR.Tests
 
             var pipeline = builder.AddWorker<FakeTerminalWorker>();
             await using var sp = services.BuildServiceProvider();
-            await pipeline.Build(sp)(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await pipeline.Build(sp).ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             defaultCalled.ShouldBeTrue();
         }
@@ -228,7 +228,7 @@ namespace WorkR.Tests
             var pipeline = builder.AddWorker<FakeTerminalWorker>(
                 middleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => explicitCalled = true)));
             await using var sp = services.BuildServiceProvider();
-            await pipeline.Build(sp)(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await pipeline.Build(sp).ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             defaultCalled.ShouldBeTrue();
             explicitCalled.ShouldBeTrue();

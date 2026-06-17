@@ -11,9 +11,7 @@ namespace WorkR
 
             internal DelegateWorkerPipeline(Func<TIn, CancellationToken, Task> execute)
             {
-                ArgumentNullException.ThrowIfNull(execute);
-
-                _execute = execute;
+                _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             }
 
             public Task ExecuteAsync(TIn value, CancellationToken cancellationToken) =>
