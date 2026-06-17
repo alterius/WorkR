@@ -1,6 +1,6 @@
 using Shouldly;
 
-namespace WorkR.Tests
+namespace WorkR.Tests.Context
 {
     [Trait("Category", "L0")]
     public class ValueTriggerContextTests

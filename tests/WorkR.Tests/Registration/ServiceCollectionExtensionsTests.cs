@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Shouldly;
 
-namespace WorkR.Tests
+namespace WorkR.Tests.Registration
 {
     [Trait("Category", "L0")]
     public class ServiceCollectionExtensionsTests
@@ -39,17 +39,6 @@ namespace WorkR.Tests
                 builder => builder.AddWorker<FakeWorker>());
 
             services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
-        }
-
-        private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
-        {
-            public Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
-                Task.CompletedTask;
-        }
-
-        private sealed class FakeWorker : IWorker<EmptyTriggerContext>
-        {
-            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

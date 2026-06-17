@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
-namespace WorkR.Tests
+namespace WorkR.Tests.Pipeline
 {
     [Trait("Category", "L0")]
     public class WorkerPipelineBuilderTests

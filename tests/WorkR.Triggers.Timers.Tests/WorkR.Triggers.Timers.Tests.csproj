@@ -42,6 +42,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Shared lambda->pipeline adapter for invoking triggers in tests -->
+    <Compile Include="..\WorkR.Tests\Fakes\TriggerPipelineTestExtensions.cs" Link="Fakes\TriggerPipelineTestExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

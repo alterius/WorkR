@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using WorkR.Middleware;
 
-namespace WorkR.Tests
+namespace WorkR.Tests.Pipeline
 {
     [Trait("Category", "L0")]
     public class WorkerRegistrationBuilderTests
@@ -238,12 +238,6 @@ namespace WorkR.Tests
             IServiceCollection services,
             Action<WorkerMiddlewarePipelineBuilder>? defaultMiddleware = null) =>
             new(services, WorkerPipelineBuilder.Create<EmptyTriggerContext>(), defaultMiddleware);
-
-        private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
-        {
-            public Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
-                Task.CompletedTask;
-        }
 
         private sealed class FakeTerminalWorker : IWorker<EmptyTriggerContext>
         {
