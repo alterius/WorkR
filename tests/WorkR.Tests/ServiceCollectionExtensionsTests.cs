@@ -26,7 +26,7 @@ namespace WorkR.Tests
             Should.Throw<ArgumentNullException>(() =>
                 services.AddWorker(
                     _ => new FakeTrigger(),
-                    (WorkerPipelineBuilderDelegate<FakeTrigger, EmptyTriggerContext>)null!));
+                    (WorkerRegistration<FakeTrigger, EmptyTriggerContext>)null!));
         }
 
         [Fact]
@@ -43,7 +43,7 @@ namespace WorkR.Tests
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
-            public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 Task.CompletedTask;
         }
 

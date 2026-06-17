@@ -31,7 +31,7 @@ A trigger owns the execution loop and is responsible for calling the downstream 
 public interface ITrigger<out TContext>
     where TContext : TriggerContext
 {
-    Task ExecuteAsync(WorkerDelegate<TContext> workerPipeline, CancellationToken stoppingToken);
+    Task ExecuteAsync(WorkerPipeline<TContext> workerPipeline, CancellationToken stoppingToken);
 }
 ```
 
@@ -55,7 +55,7 @@ A transforming worker. Receives a value, performs optional work, and calls `next
 ```csharp
 public interface IWorker<in TIn, out TOut>
 {
-    Task ExecuteAsync(TIn source, WorkerDelegate<TOut> next, CancellationToken cancellationToken);
+    Task ExecuteAsync(TIn source, WorkerPipeline<TOut> next, CancellationToken cancellationToken);
 }
 ```
 
@@ -123,7 +123,7 @@ public class MyQueueTrigger : ITrigger<MyQueueContext>
 
     public MyQueueTrigger(IMyQueue queue) => _queue = queue;
 
-    public async Task ExecuteAsync(WorkerDelegate<MyQueueContext> workerPipeline, CancellationToken stoppingToken)
+    public async Task ExecuteAsync(WorkerPipeline<MyQueueContext> workerPipeline, CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {

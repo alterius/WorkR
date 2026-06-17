@@ -4,12 +4,12 @@ using WorkR.Middleware;
 namespace WorkR.Tests.Middleware
 {
     [Trait("Category", "L0")]
-    public class MiddlewarePipelineBuilderTests
+    public class WorkerMiddlewarePipelineBuilderTests
     {
         [Fact]
         public void UseMiddleware_WithFactory_WhenFactoryIsNull_ThrowsArgumentNullException()
         {
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
 
             Should.Throw<ArgumentNullException>(() =>
                 builder.UseMiddleware((Func<IServiceProvider, NoopMiddleware>)null!));
@@ -18,7 +18,7 @@ namespace WorkR.Tests.Middleware
         [Fact]
         public void UseMiddleware_WithInstance_WhenMiddlewareIsNull_ThrowsArgumentNullException()
         {
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
 
             Should.Throw<ArgumentNullException>(() =>
                 builder.UseMiddleware((IWorkerMiddleware)null!));
@@ -27,27 +27,18 @@ namespace WorkR.Tests.Middleware
         [Fact]
         public void UseMiddleware_ReturnsBuilderForChaining()
         {
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
 
             builder.UseMiddleware(new NoopMiddleware()).ShouldBeSameAs(builder);
-        }
-
-        [Fact]
-        public void Build_WhenWorkerExecutionIsNull_ThrowsArgumentNullException()
-        {
-            var builder = new MiddlewarePipelineBuilder();
-
-            Should.Throw<ArgumentNullException>(() => builder.Build(null!));
         }
 
         [Fact]
         public async Task Build_WhenNoMiddlewareRegistered_CallsWorkerDirectly()
         {
             var called = false;
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
 
-            var pipeline = builder.Build((sp, ct) => { called = true; return Task.CompletedTask; });
-            await pipeline(null!, TestContext.Current.CancellationToken);
+            await builder.Build()(null!, (sp, ct) => { called = true; return Task.CompletedTask; }, TestContext.Current.CancellationToken);
 
             called.ShouldBeTrue();
         }
@@ -56,12 +47,11 @@ namespace WorkR.Tests.Middleware
         public async Task Build_ExecutesMiddlewareInRegistrationOrder()
         {
             var order = new List<string>();
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
             builder.UseMiddleware(new RecordingMiddleware("A", order));
             builder.UseMiddleware(new RecordingMiddleware("B", order));
 
-            var pipeline = builder.Build((sp, ct) => Task.CompletedTask);
-            await pipeline(null!, TestContext.Current.CancellationToken);
+            await builder.Build()(null!, (sp, ct) => Task.CompletedTask, TestContext.Current.CancellationToken);
 
             order.ShouldBe(["A", "B"]);
         }
@@ -70,11 +60,10 @@ namespace WorkR.Tests.Middleware
         public async Task Build_MiddlewareCanShortCircuitPipeline()
         {
             var workerCalled = false;
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
             builder.UseMiddleware(new ShortCircuitMiddleware());
 
-            var pipeline = builder.Build((sp, ct) => { workerCalled = true; return Task.CompletedTask; });
-            await pipeline(null!, TestContext.Current.CancellationToken);
+            await builder.Build()(null!, (sp, ct) => { workerCalled = true; return Task.CompletedTask; }, TestContext.Current.CancellationToken);
 
             workerCalled.ShouldBeFalse();
         }
@@ -82,26 +71,26 @@ namespace WorkR.Tests.Middleware
         [Fact]
         public void UseTimeout_ReturnsBuilderForChaining()
         {
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
 
             builder.UseTimeout(TimeSpan.FromSeconds(1)).ShouldBeSameAs(builder);
         }
 
         [Fact]
-        public void UsePipelineMiddleware_WithFactory_WhenFactoryIsNull_ThrowsArgumentNullException()
+        public void UseInternalMiddleware_WithFactory_WhenFactoryIsNull_ThrowsArgumentNullException()
         {
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
 
             Should.Throw<ArgumentNullException>(() =>
-                builder.UsePipelineMiddleware((Func<IServiceProvider, ScopeMiddleware>)null!));
+                builder.UseInternalMiddleware((Func<IServiceProvider, ScopeMiddleware>)null!));
         }
 
         [Fact]
-        public void UsePipelineMiddleware_WithFactory_ReturnsBuilderForChaining()
+        public void UseInternalMiddleware_WithFactory_ReturnsBuilderForChaining()
         {
-            var builder = new MiddlewarePipelineBuilder();
+            var builder = new WorkerMiddlewarePipelineBuilder();
 
-            builder.UsePipelineMiddleware(_ => new ScopeMiddleware()).ShouldBeSameAs(builder);
+            builder.UseInternalMiddleware(_ => new ScopeMiddleware()).ShouldBeSameAs(builder);
         }
 
         private sealed class NoopMiddleware : IWorkerMiddleware

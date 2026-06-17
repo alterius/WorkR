@@ -76,7 +76,7 @@ public class FetchWorker : IWorker<EmptyTriggerContext, IReadOnlyList<Order>>
 
     public async Task ExecuteAsync(
         EmptyTriggerContext context,
-        WorkerDelegate<IReadOnlyList<Order>> next,
+        WorkerPipeline<IReadOnlyList<Order>> next,
         CancellationToken cancellationToken)
     {
         var orders = await _repo.GetPendingAsync(cancellationToken);
@@ -114,7 +114,7 @@ Implement `ITrigger<TContext>` to define a trigger with any execution model, the
 ```csharp
 public class MyTrigger : ITrigger<EmptyTriggerContext>
 {
-    public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
+    public async Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -147,7 +147,7 @@ pipeline.AddWorker<MyWorker>(lifetime: null)
 
 ## Middleware
 
-Middleware is configured per worker step using `MiddlewarePipelineBuilder`. It wraps worker execution and is applied in registration order (outermost first).
+Middleware is configured per worker step using `WorkerMiddlewarePipelineBuilder`. It wraps worker execution and is applied in registration order (outermost first).
 
 ### `UseScope`
 

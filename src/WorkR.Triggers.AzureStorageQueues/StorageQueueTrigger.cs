@@ -37,7 +37,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             _logger = logger;
         }
 
-        public async Task ExecuteAsync(WorkerDelegate<TContext> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerPipeline<TContext> workerPipeline, CancellationToken stoppingToken)
         {
             using var _ = _logger.BeginScope(new Dictionary<string, object?> { ["QueueName"] = _queueClient.Name });
 
@@ -242,7 +242,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             _timeProvider = timeProvider;
         }
 
-        public Task ExecuteAsync(WorkerDelegate<StorageQueueTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+        public Task ExecuteAsync(WorkerPipeline<StorageQueueTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
             _inner.ExecuteAsync(workerPipeline, stoppingToken);
 
         private Task<StorageQueueTriggerContext> CreateContextAsync(Guid executionId, QueueMessage queueMessage) =>
@@ -288,7 +288,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             _timeProvider = timeProvider;
         }
 
-        public Task ExecuteAsync(WorkerDelegate<StorageQueueTriggerContext<T>> workerPipeline, CancellationToken stoppingToken) =>
+        public Task ExecuteAsync(WorkerPipeline<StorageQueueTriggerContext<T>> workerPipeline, CancellationToken stoppingToken) =>
             _inner.ExecuteAsync(workerPipeline, stoppingToken);
 
         private async Task<StorageQueueTriggerContext<T>> CreateContextAsync(Guid executionId, QueueMessage queueMessage) =>

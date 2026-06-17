@@ -1,118 +1,212 @@
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
-using WorkR.Middleware;
 
 namespace WorkR.Tests
 {
     [Trait("Category", "L0")]
     public class WorkerPipelineBuilderTests
     {
+        // WorkerPipelineBuilder<TIn> — public class, internal constructor
+
         [Fact]
-        public void Constructor_WhenServicesIsNull_ThrowsArgumentNullException()
+        public void WorkerPipelineFinal_Constructor_WhenPipelineIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new WorkerPipelineBuilder<FakeTrigger, EmptyTriggerContext>(
-                    null!, WorkerPipeline.Create<EmptyTriggerContext>()));
+                new WorkerPipelineBuilder<string>([], null!));
         }
 
         [Fact]
-        public void Constructor_WhenBuilderIsNull_ThrowsArgumentNullException()
+        public void WorkerPipelineFinal_Constructor_WhenWorkerNamesIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
-                new WorkerPipelineBuilder<FakeTrigger, EmptyTriggerContext>(
-                    new ServiceCollection(), null!));
+                new WorkerPipelineBuilder<string>(null!, (_, _, _) => Task.CompletedTask));
         }
 
         [Fact]
-        public void AddWorker_WithNullLifetime_DoesNotRegisterWorkerInServices()
+        public void WorkerPipelineFinal_Constructor_WhenWorkerNamesIsEmpty_ThrowsArgumentException()
         {
-            var services = new ServiceCollection();
-
-            CreateBuilder(services).AddWorker<FakeTerminalWorker>(lifetime: null);
-
-            services.ShouldNotContain(d => d.ServiceType == typeof(FakeTerminalWorker));
+            Should.Throw<ArgumentException>(() =>
+                new WorkerPipelineBuilder<string>([], (_, _, _) => Task.CompletedTask));
         }
 
         [Fact]
-        public void AddWorker_Terminal_WithFactory_RegistersWorkerViaFactory()
+        public void WorkerPipelineFinal_WorkerNames_ExposesProvidedNames()
         {
-            var services = new ServiceCollection();
+            var pipeline = new WorkerPipelineBuilder<string>(
+                ["UpperCaseWorker", "CapturingWorker"],
+                (_, _, _) => Task.CompletedTask);
 
-            CreateBuilder(services).AddWorker(_ => new FakeTerminalWorker());
-
-            services.ShouldContain(d => d.ServiceType == typeof(FakeTerminalWorker));
+            pipeline.WorkerNames.ShouldBe(["UpperCaseWorker", "CapturingWorker"]);
         }
 
         [Fact]
-        public void AddWorker_Transform_WithFactory_RegistersWorkerViaFactory()
+        public async Task Build_ReturnsDelegate_ThatInvokesPipeline()
         {
-            var services = new ServiceCollection();
+            var called = false;
+            var pipeline = new WorkerPipelineBuilder<string>(
+                ["CapturingWorker"],
+                (sp, value, ct) =>
+                {
+                    called = true;
+                    return Task.CompletedTask;
+                });
 
-            CreateBuilder(services).AddWorker<FakeTransformWorker, string>(_ => new FakeTransformWorker());
+            await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
 
-            services.ShouldContain(d => d.ServiceType == typeof(FakeTransformWorker));
+            called.ShouldBeTrue();
         }
 
         [Fact]
-        public async Task AddWorker_WithDefaultMiddleware_AppliesItWhenNoExplicitMiddlewareGiven()
+        public async Task Build_PassesServiceProviderToPipeline()
         {
-            var defaultCalled = false;
-            var services = new ServiceCollection().AddSingleton<FakeTerminalWorker>();
-            var builder = CreateBuilder(services,
-                defaultMiddleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => defaultCalled = true)));
+            IServiceProvider? captured = null;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
+            var pipeline = new WorkerPipelineBuilder<string>(
+                ["CapturingWorker"],
+                (serviceProvider, _, _) =>
+                {
+                    captured = serviceProvider;
+                    return Task.CompletedTask;
+                });
 
-            var pipeline = builder.AddWorker<FakeTerminalWorker>();
-            await using var sp = services.BuildServiceProvider();
-            await pipeline.Build(sp)(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await pipeline.Build(sp).Invoke("hello", TestContext.Current.CancellationToken);
 
-            defaultCalled.ShouldBeTrue();
+            captured.ShouldBeSameAs(sp);
         }
 
         [Fact]
-        public async Task AddWorker_WithDefaultAndExplicitMiddleware_AppliesBoth()
+        public async Task Build_PassesValueToPipeline()
         {
-            var defaultCalled = false;
-            var explicitCalled = false;
-            var services = new ServiceCollection().AddSingleton<FakeTerminalWorker>();
-            var builder = CreateBuilder(services,
-                defaultMiddleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => defaultCalled = true)));
+            string? captured = null;
+            var pipeline = new WorkerPipelineBuilder<string>(
+                ["CapturingWorker"],
+                (_, value, _) =>
+                {
+                    captured = value;
+                    return Task.CompletedTask;
+                });
 
-            var pipeline = builder.AddWorker<FakeTerminalWorker>(
-                middleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => explicitCalled = true)));
-            await using var sp = services.BuildServiceProvider();
-            await pipeline.Build(sp)(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await pipeline.Build(null!).Invoke("hello", TestContext.Current.CancellationToken);
 
-            defaultCalled.ShouldBeTrue();
-            explicitCalled.ShouldBeTrue();
+            captured.ShouldBe("hello");
         }
 
-        private static WorkerPipelineBuilder<FakeTrigger, EmptyTriggerContext> CreateBuilder(
-            IServiceCollection services,
-            Action<MiddlewarePipelineBuilder>? defaultMiddleware = null) =>
-            new(services, WorkerPipeline.Create<EmptyTriggerContext>(), defaultMiddleware);
+        // WorkerPipelineBuilder<TIn, TOut> — internal class, internal constructor
 
-        private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
+        [Fact]
+        public void WorkerPipelineIntermediate_Constructor_WhenPipelineIsNull_ThrowsArgumentNullException()
         {
-            public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
-                Task.CompletedTask;
+            Should.Throw<ArgumentNullException>(() =>
+                new WorkerPipelineBuilder<string, string>([], null!));
         }
 
-        private sealed class FakeTerminalWorker : IWorker<EmptyTriggerContext>
+        // WorkerPipelineBuilder.Create / Then / Finally — pipeline composition from step delegates
+
+        [Fact]
+        public async Task Create_ProducesPassthroughPipeline()
         {
-            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+            string? captured = null;
+
+            var del = WorkerPipelineBuilder.Create<string>()
+                .Finally("capture", (sp, value, ct) =>
+                {
+                    captured = value;
+                    return Task.CompletedTask;
+                })
+                .Build(null!);
+
+            await del("hello", TestContext.Current.CancellationToken);
+
+            captured.ShouldBe("hello");
         }
 
-        private sealed class FakeTransformWorker : IWorker<EmptyTriggerContext, string>
+        [Fact]
+        public async Task Then_TransformsValueBeforeNextStage()
         {
-            public Task ExecuteAsync(EmptyTriggerContext source, WorkerDelegate<string> next, CancellationToken cancellationToken) =>
-                next("result", cancellationToken);
+            string? captured = null;
+
+            var del = WorkerPipelineBuilder.Create<string>()
+                .Then<string>("upper", (sp, value, next, ct) => next(sp, value.ToUpper(), ct))
+                .Finally("capture", (sp, value, ct) =>
+                {
+                    captured = value;
+                    return Task.CompletedTask;
+                })
+                .Build(null!);
+
+            await del("hello", TestContext.Current.CancellationToken);
+
+            captured.ShouldBe("HELLO");
         }
 
-        private sealed class RecordingMiddleware(Action onExecute) : IWorkerMiddleware
+        [Fact]
+        public async Task Finally_CallsTerminalStepWithValue()
         {
+            string? captured = null;
+
+            var del = WorkerPipelineBuilder.Create<string>()
+                .Finally("capture", (sp, value, ct) =>
+                {
+                    captured = value;
+                    return Task.CompletedTask;
+                })
+                .Build(null!);
+
+            await del("world", TestContext.Current.CancellationToken);
+
+            captured.ShouldBe("world");
+        }
+
+        [Fact]
+        public void Compose_RecordsWorkerNamesInPipelineOrder()
+        {
+            var pipeline = WorkerPipelineBuilder.Create<string>()
+                .Then<string>("upper", (sp, value, next, ct) => next(sp, value, ct))
+                .Finally("capture", (sp, value, ct) => Task.CompletedTask);
+
+            pipeline.WorkerNames.ShouldBe(["upper", "capture"]);
+        }
+
+        [Fact]
+        public async Task Then_AppliesMiddlewareAroundStep()
+        {
+            var middlewareCalled = false;
+
+            var del = WorkerPipelineBuilder.Create<string>()
+                .Then<string>("upper", (sp, value, next, ct) => next(sp, value, ct),
+                    mw => mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
+                .Finally("capture", (sp, value, ct) => Task.CompletedTask)
+                .Build(null!);
+
+            await del("hello", TestContext.Current.CancellationToken);
+
+            middlewareCalled.ShouldBeTrue();
+        }
+
+        [Fact]
+        public async Task Finally_AppliesMiddlewareAroundStep()
+        {
+            var middlewareCalled = false;
+
+            var del = WorkerPipelineBuilder.Create<string>()
+                .Finally("capture", (sp, value, ct) => Task.CompletedTask,
+                    mw => mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
+                .Build(null!);
+
+            await del("hello", TestContext.Current.CancellationToken);
+
+            middlewareCalled.ShouldBeTrue();
+        }
+
+        private sealed class CallbackMiddleware : IWorkerMiddleware
+        {
+            private readonly Action _onExecute;
+
+            public CallbackMiddleware(Action onExecute) => _onExecute = onExecute;
+
             public async Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
             {
-                onExecute();
+                _onExecute();
                 await next(cancellationToken);
             }
         }

@@ -18,7 +18,7 @@ namespace WorkR.Triggers.RunOnce
             _logger = logger;
         }
 
-        public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Run once trigger initialised");
 
