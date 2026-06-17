@@ -57,11 +57,36 @@ stages:
               arguments: --no-restore --configuration Release /p:Version=$(Build.BuildNumber)
 
           - task: DotNetCoreCLI@2
-            displayName: Test
+            displayName: Test (L0)
             inputs:
               command: test
               projects: WorkR.slnx
-              arguments: --no-build --configuration Release --collect "Code coverage"
+              testRunTitle: L0
+              arguments: --no-build --configuration Release --filter "Category=L0" --collect "Code coverage" --results-directory $(Agent.TempDirectory)/coverage/L0
+
+          - task: DotNetCoreCLI@2
+            displayName: Test (L1)
+            inputs:
+              command: test
+              projects: WorkR.slnx
+              testRunTitle: L1
+              arguments: --no-build --configuration Release --filter "Category=L1" --collect "Code coverage" --results-directory $(Agent.TempDirectory)/coverage/L1
+
+          - task: DotNetCoreCLI@2
+            displayName: Test (L2)
+            inputs:
+              command: test
+              projects: WorkR.slnx
+              testRunTitle: L2
+              arguments: --no-build --configuration Release --filter "Category=L2" --collect "Code coverage" --results-directory $(Agent.TempDirectory)/coverage/L2
+
+          - task: DotNetCoreCLI@2
+            displayName: Test (L3)
+            inputs:
+              command: test
+              projects: WorkR.slnx
+              testRunTitle: L3
+              arguments: --no-build --configuration Release --filter "Category=L3" --collect "Code coverage" --results-directory $(Agent.TempDirectory)/coverage/L3
 
           - task: DotNetCoreCLI@2
             displayName: Pack (preview)
