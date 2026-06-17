@@ -15,7 +15,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
             string queueName,
-            WorkerPipelineBuilderDelegate<StorageQueueTrigger, StorageQueueTriggerContext> builder,
+            WorkerRegistration<StorageQueueTrigger, StorageQueueTriggerContext> builder,
             Action<StorageQueueTriggerOptions>? configure = null)
         {
             ArgumentNullException.ThrowIfNull(queueServiceClientFactory);
@@ -58,7 +58,7 @@ namespace WorkR.Triggers.AzureStorageQueues
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
             string queueName,
-            WorkerPipelineBuilderDelegate<StorageQueueTrigger<T>, StorageQueueTriggerContext<T>> builder,
+            WorkerRegistration<StorageQueueTrigger<T>, StorageQueueTriggerContext<T>> builder,
             Action<StorageQueueTriggerOptions>? configure = null,
             Func<IServiceProvider, StorageQueueMessageDeserializer<T>>? deserializerFactory = null)
         {

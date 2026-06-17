@@ -15,7 +15,7 @@ namespace WorkR.Triggers.AzureServiceBus
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
-            WorkerPipelineBuilderDelegate<ServiceBusTrigger, ServiceBusTriggerContext> builder,
+            WorkerRegistration<ServiceBusTrigger, ServiceBusTriggerContext> builder,
             Action<ServiceBusProcessorOptions>? configure = null)
         {
             ArgumentNullException.ThrowIfNull(clientFactory);
@@ -56,7 +56,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string topicName,
             string subscriptionName,
-            WorkerPipelineBuilderDelegate<ServiceBusTrigger, ServiceBusTriggerContext> builder,
+            WorkerRegistration<ServiceBusTrigger, ServiceBusTriggerContext> builder,
             Action<ServiceBusProcessorOptions>? configure = null)
         {
             ArgumentNullException.ThrowIfNull(clientFactory);
@@ -100,7 +100,7 @@ namespace WorkR.Triggers.AzureServiceBus
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string queueName,
-            WorkerPipelineBuilderDelegate<ServiceBusTrigger<T>, ServiceBusTriggerContext<T>> builder,
+            WorkerRegistration<ServiceBusTrigger<T>, ServiceBusTriggerContext<T>> builder,
             Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
         {
@@ -145,7 +145,7 @@ namespace WorkR.Triggers.AzureServiceBus
             Func<IServiceProvider, ServiceBusClient> clientFactory,
             string topicName,
             string subscriptionName,
-            WorkerPipelineBuilderDelegate<ServiceBusTrigger<T>, ServiceBusTriggerContext<T>> builder,
+            WorkerRegistration<ServiceBusTrigger<T>, ServiceBusTriggerContext<T>> builder,
             Action<ServiceBusProcessorOptions>? configure = null,
             Func<IServiceProvider, ServiceBusMessageDeserializer<T>>? deserializerFactory = null)
         {

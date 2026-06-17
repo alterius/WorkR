@@ -9,7 +9,7 @@ namespace WorkR.Triggers.RunOnce
     {
         public static IServiceCollection AddRunOnceWorker(
             this IServiceCollection services,
-            WorkerPipelineBuilderDelegate<RunOnceTrigger, EmptyTriggerContext> builder)
+            WorkerRegistration<RunOnceTrigger, EmptyTriggerContext> builder)
         {
             services.TryAddSingleton(TimeProvider.System);
 

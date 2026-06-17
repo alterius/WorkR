@@ -147,11 +147,11 @@ namespace WorkR.Tests
                 MakePipeline(),
                 new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
 
-        private static ILoggerFactory FakeFactory() =>
-            new LoggerFactory([new FakeLoggerProvider()]);
+        private static LoggerFactory FakeFactory() =>
+            new([new FakeLoggerProvider()]);
 
-        private static WorkerPipeline<EmptyTriggerContext> MakePipeline() =>
-            new((_, _, _) => Task.CompletedTask, ["FakeWorker"]);
+        private static WorkerPipelineBuilder<EmptyTriggerContext> MakePipeline() =>
+            new(["FakeWorker"], (_, _, _) => Task.CompletedTask);
 
         private sealed class EmptyServiceProvider : IServiceProvider
         {
@@ -162,15 +162,15 @@ namespace WorkR.Tests
 
         private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
         {
-            private readonly Func<WorkerDelegate<EmptyTriggerContext>, CancellationToken, Task> _execute;
+            private readonly Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task> _execute;
 
             public FakeTrigger(
-                Func<WorkerDelegate<EmptyTriggerContext>, CancellationToken, Task>? execute = null)
+                Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task>? execute = null)
             {
                 _execute = execute ?? ((_, _) => Task.CompletedTask);
             }
 
-            public Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
                 _execute(workerPipeline, stoppingToken);
         }
 

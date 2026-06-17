@@ -13,13 +13,13 @@ namespace WorkR
         private readonly Guid _workerServiceId = Guid.NewGuid();
         private readonly IServiceProvider _serviceProvider;
         private readonly TTrigger _trigger;
-        private readonly WorkerPipeline<TContext> _workerPipeline;
+        private readonly WorkerPipelineBuilder<TContext> _workerPipeline;
         private readonly ILogger _logger;
 
         public WorkerService(
             IServiceProvider serviceProvider,
             TTrigger trigger,
-            WorkerPipeline<TContext> workerPipeline,
+            WorkerPipelineBuilder<TContext> workerPipeline,
             ILoggerFactory loggerFactory)
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -74,8 +74,8 @@ namespace WorkR
             _logger.LogInformation("Worker service stopped");
         }
 
-        private WorkerDelegate<TContext> WithTelemetry(
-            WorkerDelegate<TContext> pipeline,
+        private WorkerPipeline<TContext> WithTelemetry(
+            WorkerPipeline<TContext> pipeline,
             string workerVersion,
             string triggerName,
             string triggerVersion,

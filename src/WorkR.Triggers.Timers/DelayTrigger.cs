@@ -25,7 +25,7 @@ namespace WorkR.Triggers.Timers
             _runOnStartup = runOnStartup;
         }
 
-        public async Task ExecuteAsync(WorkerDelegate<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Delay trigger initialised with delay: {delay} and runOnStartup {runOnStartup}", _delay, _runOnStartup);
 

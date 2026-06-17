@@ -7,6 +7,6 @@
 
     public interface IWorker<in TIn, out TOut>
     {
-        Task ExecuteAsync(TIn source, WorkerDelegate<TOut> next, CancellationToken cancellationToken);
+        Task ExecuteAsync(TIn source, WorkerPipeline<TOut> next, CancellationToken cancellationToken);
     }
 }

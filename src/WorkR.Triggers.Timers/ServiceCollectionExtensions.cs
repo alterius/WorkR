@@ -10,7 +10,7 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddDelayWorker(
             this IServiceCollection services,
             TimeSpan delay,
-            WorkerPipelineBuilderDelegate<DelayTrigger, EmptyTriggerContext> builder,
+            WorkerRegistration<DelayTrigger, EmptyTriggerContext> builder,
             bool runOnStartup = false)
         {
             services.TryAddSingleton(TimeProvider.System);
@@ -43,7 +43,7 @@ namespace WorkR.Triggers.Timers
         public static IServiceCollection AddScheduledWorker(
             this IServiceCollection services,
             string schedule,
-            WorkerPipelineBuilderDelegate<ScheduledTrigger, EmptyTriggerContext> builder,
+            WorkerRegistration<ScheduledTrigger, EmptyTriggerContext> builder,
             bool includeSeconds = false,
             bool runOnStartup = false,
             bool cancelOnOverlap = false)

@@ -12,7 +12,7 @@ namespace WorkR.Samples.CustomTrigger
             _timeProvider = timeProvider;
         }
 
-        public async Task ExecuteAsync(WorkerDelegate<ValueTriggerContext<int>> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(WorkerPipeline<ValueTriggerContext<int>> workerPipeline, CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {

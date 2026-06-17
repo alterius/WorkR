@@ -1,171 +1,101 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using WorkR.Middleware;
 
 namespace WorkR
 {
-    public delegate WorkerPipeline<TContext> WorkerPipelineBuilderDelegate<TTrigger, TContext>(WorkerPipelineBuilder<TTrigger, TContext> builder)
-        where TTrigger : ITrigger<TContext>
-        where TContext : TriggerContext;
+    internal delegate Task WorkerPipelineStage<in TIn>(IServiceProvider sp, TIn value, CancellationToken cancellationToken);
+    internal delegate Task WorkerPipelineStage<in TIn, out TOut>(IServiceProvider sp, TIn value, WorkerPipelineStage<TOut> next, CancellationToken cancellationToken);
 
-    public sealed class WorkerPipelineBuilder<TTrigger, TContext>
-        where TTrigger : ITrigger<TContext>
-        where TContext : TriggerContext
+    internal static class WorkerPipelineBuilder
     {
-        private readonly WorkerPipelineBuilder<TTrigger, TContext, TContext> _builder;
-        private readonly Action<MiddlewarePipelineBuilder>? _defaultMiddleware;
+        internal static WorkerPipelineBuilder<TIn, TIn> Create<TIn>() =>
+            new([], static (sp, value, next, ct) => next(sp, value, ct));
+    }
 
-        internal WorkerPipelineBuilder(
-            IServiceCollection services,
-            WorkerPipeline<TContext, TContext> builder,
-            Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
+    internal sealed class WorkerPipelineBuilder<TIn, TOut>
+    {
+        private readonly IReadOnlyList<string> _workerNames;
+        private readonly WorkerPipelineStage<TIn, TOut> _pipeline;
+
+        internal WorkerPipelineBuilder(IReadOnlyList<string> workerNames, WorkerPipelineStage<TIn, TOut> pipeline)
         {
-            ArgumentNullException.ThrowIfNull(services);
-            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(workerNames);
+            ArgumentNullException.ThrowIfNull(pipeline);
 
-            _builder = new WorkerPipelineBuilder<TTrigger, TContext, TContext>(services, builder);
-            _defaultMiddleware = defaultMiddleware;
+            _pipeline = pipeline;
+            _workerNames = workerNames;
         }
 
-        public WorkerPipelineBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
-            ServiceLifetime? lifetime = ServiceLifetime.Transient,
+        internal WorkerPipelineBuilder<TIn, TNext> Then<TNext>(
+            string name,
+            WorkerPipelineStage<TOut, TNext> step,
             Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TContext, TOut> =>
-                    _builder.AddWorker<TWorker, TOut>(lifetime, ResolveMiddleware(middleware));
-
-        public WorkerPipelineBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
-            Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TContext, TOut> =>
-                    _builder.AddWorker<TWorker, TOut>(factory, lifetime, ResolveMiddleware(middleware));
-
-        public WorkerPipeline<TContext> AddWorker<TWorker>(
-            ServiceLifetime? lifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TContext> =>
-                    _builder.AddWorker<TWorker>(lifetime, ResolveMiddleware(middleware));
-
-        public WorkerPipeline<TContext> AddWorker<TWorker>(
-            Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TContext> =>
-                    _builder.AddWorker(factory, lifetime, ResolveMiddleware(middleware));
-
-        private Action<MiddlewarePipelineBuilder>? ResolveMiddleware(Action<MiddlewarePipelineBuilder>? middleware)
         {
-            if (_defaultMiddleware == null)
-            {
-                return middleware;
-            }
+            ArgumentNullException.ThrowIfNull(name);
+            ArgumentNullException.ThrowIfNull(step);
 
-            if (middleware == null)
-            {
-                return _defaultMiddleware;
-            }
+            var current = _pipeline;
+            var applyMiddleware = BuildMiddleware(middleware);
 
-            return mw => {
-                _defaultMiddleware(mw);
-                middleware(mw);
-            };
+            return new WorkerPipelineBuilder<TIn, TNext>(
+                [.._workerNames, name],
+                (sp, value, next, ct) =>
+                    current(sp, value, (sp2, value2, ct2) =>
+                        applyMiddleware((sp3, ct3) =>
+                            step(sp3, value2, next, ct3))(sp2, ct2), ct));
+        }
+
+        internal WorkerPipelineBuilder<TIn> Finally(
+            string name,
+            WorkerPipelineStage<TOut> step,
+            Action<MiddlewarePipelineBuilder>? middleware = null)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            ArgumentNullException.ThrowIfNull(step);
+
+            var current = _pipeline;
+            var applyMiddleware = BuildMiddleware(middleware);
+
+            return new WorkerPipelineBuilder<TIn>(
+                [.._workerNames, name],
+                (sp, value, ct) =>
+                    current(sp, value, (sp2, value2, ct2) =>
+                        applyMiddleware((sp3, ct3) =>
+                            step(sp3, value2, ct3))(sp2, ct2), ct));
+        }
+
+        private static Func<PipelineMiddlewareDelegate, PipelineMiddlewareDelegate> BuildMiddleware(
+            Action<MiddlewarePipelineBuilder>? configure)
+        {
+            var builder = new MiddlewarePipelineBuilder();
+            configure?.Invoke(builder);
+            return builder.Build;
         }
     }
 
-    public sealed class WorkerPipelineBuilder<TTrigger, TContext, TOut>
-        where TTrigger : ITrigger<TContext>
-        where TContext : TriggerContext
+    public sealed class WorkerPipelineBuilder<TIn>
     {
-        private readonly IServiceCollection _services;
-        private readonly WorkerPipeline<TContext, TOut> _pipeline;
+        private readonly IReadOnlyList<string> _workerNames;
+        private readonly WorkerPipelineStage<TIn> _pipeline;
 
-        internal WorkerPipelineBuilder(
-            IServiceCollection services,
-            WorkerPipeline<TContext, TOut> pipeline)
+        internal WorkerPipelineBuilder(IReadOnlyList<string> workerNames, WorkerPipelineStage<TIn> pipeline)
         {
-            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(workerNames);
             ArgumentNullException.ThrowIfNull(pipeline);
 
-            _services = services;
-            _pipeline = pipeline;
-        }
-
-        public WorkerPipelineBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
-            ServiceLifetime? lifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TOut, TNext>
-        {
-            TryRegister<TWorker>(lifetime);
-            return Then<TWorker, TNext>(sp => sp.GetRequiredService<TWorker>(), middleware);
-        }
-
-        public WorkerPipelineBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
-            Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TOut, TNext>
-        {
-            RegisterFactory(factory, lifetime);
-            return Then<TWorker, TNext>(factory, middleware);
-        }
-
-        public WorkerPipeline<TContext> AddWorker<TWorker>(
-            ServiceLifetime? lifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TOut>
-        {
-            TryRegister<TWorker>(lifetime);
-            return Finally<TWorker>(sp => sp.GetRequiredService<TWorker>(), middleware);
-        }
-
-        public WorkerPipeline<TContext> AddWorker<TWorker>(
-            Func<IServiceProvider, TWorker> factory,
-            ServiceLifetime lifetime = ServiceLifetime.Transient,
-            Action<MiddlewarePipelineBuilder>? middleware = null)
-                where TWorker : IWorker<TOut>
-        {
-            RegisterFactory(factory, lifetime);
-            return Finally<TWorker>(factory, middleware);
-        }
-
-        private WorkerPipelineBuilder<TTrigger, TContext, TNext> Then<TWorker, TNext>(
-            Func<IServiceProvider, TWorker> workerFactory,
-            Action<MiddlewarePipelineBuilder>? middleware)
-                where TWorker : IWorker<TOut, TNext>
-        {
-            var builder = _pipeline.Then<TNext>(
-                WorkerName<TWorker>(),
-                (sp, value, next, ct) => workerFactory(sp).ExecuteAsync(value, (v, ct2) => next(sp, v, ct2), ct),
-                middleware);
-            return new WorkerPipelineBuilder<TTrigger, TContext, TNext>(_services, builder);
-        }
-
-        private WorkerPipeline<TContext> Finally<TWorker>(
-            Func<IServiceProvider, TWorker> workerFactory,
-            Action<MiddlewarePipelineBuilder>? middleware)
-                where TWorker : IWorker<TOut> =>
-                    _pipeline.Finally(
-                        WorkerName<TWorker>(),
-                        (sp, value, ct) => workerFactory(sp).ExecuteAsync(value, ct),
-                        middleware);
-
-        private static string WorkerName<TWorker>() =>
-            TypeNameHelper.GetTypeDisplayName(typeof(TWorker), fullName: false);
-
-        private void RegisterFactory<TWorker>(Func<IServiceProvider, TWorker> factory, ServiceLifetime lifetime)
-            where TWorker : notnull
-        {
-            var descriptor = ServiceDescriptor.Describe(typeof(TWorker), sp => factory(sp), lifetime);
-            _services.TryAdd(descriptor);
-        }
-
-        private void TryRegister<TWorker>(ServiceLifetime? lifetime)
-        {
-            if (lifetime.HasValue)
+            if (workerNames.Count <= 0)
             {
-                var descriptor = ServiceDescriptor.Describe(typeof(TWorker), typeof(TWorker), lifetime.Value);
-                _services.TryAdd(descriptor);
+                throw new ArgumentException($"{nameof(workerNames)} must contain at least one item.", nameof(workerNames));
             }
+
+            _pipeline = pipeline;
+            _workerNames = workerNames;
+        }
+
+        internal IReadOnlyList<string> WorkerNames => _workerNames;
+
+        internal WorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
+        {
+            return (value, ct) => _pipeline(serviceProvider, value, ct);
         }
     }
 }

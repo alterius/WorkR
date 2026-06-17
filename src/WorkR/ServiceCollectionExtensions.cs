@@ -10,7 +10,7 @@ namespace WorkR
         public static IServiceCollection AddWorker<TTrigger, TContext>(
             this IServiceCollection services,
             Func<IServiceProvider, TTrigger> triggerFactory,
-            WorkerPipelineBuilderDelegate<TTrigger, TContext> builder,
+            WorkerRegistration<TTrigger, TContext> builder,
             Action<MiddlewarePipelineBuilder>? defaultMiddleware = null)
                 where TTrigger : ITrigger<TContext>
                 where TContext : TriggerContext
@@ -19,9 +19,9 @@ namespace WorkR
             ArgumentNullException.ThrowIfNull(builder);
 
             var pipeline = builder(
-                new WorkerPipelineBuilder<TTrigger, TContext>(
+                new WorkerRegistrationBuilder<TTrigger, TContext>(
                     services,
-                    WorkerPipeline.Create<TContext>(),
+                    WorkerPipelineBuilder.Create<TContext>(),
                     defaultMiddleware));
 
             return services.AddSingleton<IHostedService>(sp =>
