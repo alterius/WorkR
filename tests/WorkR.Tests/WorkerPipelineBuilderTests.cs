@@ -98,6 +98,74 @@ namespace WorkR.Tests
         }
 
         [Fact]
+        public void AddWorker_Terminal_WithLifetime_RegistersWorkerWithThatLifetime()
+        {
+            var services = new ServiceCollection();
+
+            CreateBuilder(services).AddWorker<FakeTerminalWorker>(ServiceLifetime.Singleton);
+
+            services.ShouldContain(d =>
+                d.ServiceType == typeof(FakeTerminalWorker) &&
+                d.ImplementationType == typeof(FakeTerminalWorker) &&
+                d.Lifetime == ServiceLifetime.Singleton);
+        }
+
+        [Fact]
+        public void AddWorker_Transform_WithLifetime_RegistersWorkerWithThatLifetime()
+        {
+            var services = new ServiceCollection();
+
+            CreateBuilder(services).AddWorker<FakeTransformWorker, string>(ServiceLifetime.Scoped);
+
+            services.ShouldContain(d =>
+                d.ServiceType == typeof(FakeTransformWorker) &&
+                d.ImplementationType == typeof(FakeTransformWorker) &&
+                d.Lifetime == ServiceLifetime.Scoped);
+        }
+
+        [Fact]
+        public void AddWorker_Transform_WithLifetime_DefaultsToTransient()
+        {
+            var services = new ServiceCollection();
+
+            CreateBuilder(services).AddWorker<FakeTransformWorker, string>();
+
+            services.ShouldContain(d =>
+                d.ServiceType == typeof(FakeTransformWorker) &&
+                d.Lifetime == ServiceLifetime.Transient);
+        }
+
+        [Fact]
+        public void AddWorker_InnerTransform_WithLifetime_RegistersWorkerWithThatLifetime()
+        {
+            var services = new ServiceCollection();
+
+            CreateBuilder(services)
+                .AddWorker<FakeTransformWorker, string>(_ => new FakeTransformWorker())
+                .AddWorker<FakeStringTransformWorker, int>(ServiceLifetime.Singleton);
+
+            services.ShouldContain(d =>
+                d.ServiceType == typeof(FakeStringTransformWorker) &&
+                d.ImplementationType == typeof(FakeStringTransformWorker) &&
+                d.Lifetime == ServiceLifetime.Singleton);
+        }
+
+        [Fact]
+        public void AddWorker_InnerTerminal_WithLifetime_RegistersWorkerWithThatLifetime()
+        {
+            var services = new ServiceCollection();
+
+            CreateBuilder(services)
+                .AddWorker<FakeTransformWorker, string>(_ => new FakeTransformWorker())
+                .AddWorker<FakeStringTerminalWorker>(ServiceLifetime.Scoped);
+
+            services.ShouldContain(d =>
+                d.ServiceType == typeof(FakeStringTerminalWorker) &&
+                d.ImplementationType == typeof(FakeStringTerminalWorker) &&
+                d.Lifetime == ServiceLifetime.Scoped);
+        }
+
+        [Fact]
         public async Task AddWorker_WithDefaultMiddleware_AppliesItWhenNoExplicitMiddlewareGiven()
         {
             var defaultCalled = false;
@@ -155,6 +223,12 @@ namespace WorkR.Tests
         private sealed class FakeStringTerminalWorker : IWorker<string>
         {
             public Task ExecuteAsync(string context, CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
+        private sealed class FakeStringTransformWorker : IWorker<string, int>
+        {
+            public Task ExecuteAsync(string source, WorkerDelegate<int> next, CancellationToken cancellationToken) =>
+                next(0, cancellationToken);
         }
 
         private sealed class RecordingMiddleware(Action onExecute) : IWorkerMiddleware
