@@ -318,9 +318,9 @@ namespace WorkR.Tests
             FakeTrigger? trigger = null,
             WorkerPipelineBuilder<EmptyTriggerContext>? pipeline = null,
             FakeLoggerProvider? loggerProvider = null) =>
-            new(EmptyServiceProvider.Instance,
-                trigger ?? new FakeTrigger(),
-                pipeline ?? new WorkerPipelineBuilder<EmptyTriggerContext>(["FakeWorker"], (_, _, _) => Task.CompletedTask),
+            new(trigger ?? new FakeTrigger(),
+                (pipeline ?? new WorkerPipelineBuilder<EmptyTriggerContext>(["FakeWorker"], (_, _, _) => Task.CompletedTask))
+                    .Build(EmptyServiceProvider.Instance),
                 new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
 
         private sealed class EmptyServiceProvider : IServiceProvider

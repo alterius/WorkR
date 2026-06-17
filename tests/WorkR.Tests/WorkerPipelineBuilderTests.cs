@@ -30,13 +30,13 @@ namespace WorkR.Tests
         }
 
         [Fact]
-        public void WorkerPipelineFinal_WorkerNames_ExposesProvidedNames()
+        public void WorkerPipelineFinal_Name_JoinsProvidedNames()
         {
             var pipeline = new WorkerPipelineBuilder<string>(
                 ["UpperCaseWorker", "CapturingWorker"],
                 (_, _, _) => Task.CompletedTask);
 
-            pipeline.WorkerNames.ShouldBe(["UpperCaseWorker", "CapturingWorker"]);
+            pipeline.Build(null!).Name.ShouldBe("UpperCaseWorker -> CapturingWorker");
         }
 
         [Fact]
@@ -164,7 +164,7 @@ namespace WorkR.Tests
                 .Then<string>("upper", (sp, value, next, ct) => next(sp, value, ct))
                 .Finally("capture", (sp, value, ct) => Task.CompletedTask);
 
-            pipeline.WorkerNames.ShouldBe(["upper", "capture"]);
+            pipeline.Build(null!).Name.ShouldBe("upper -> capture");
         }
 
         [Fact]

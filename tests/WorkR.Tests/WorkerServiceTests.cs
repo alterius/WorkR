@@ -8,22 +8,10 @@ namespace WorkR.Tests
     public class WorkerServiceTests
     {
         [Fact]
-        public void Constructor_WhenServiceProviderIsNull_ThrowsArgumentNullException()
-        {
-            Should.Throw<ArgumentNullException>(() =>
-                new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    null!,
-                    new FakeTrigger(),
-                    MakePipeline(),
-                    FakeFactory()));
-        }
-
-        [Fact]
         public void Constructor_WhenTriggerIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    EmptyServiceProvider.Instance,
                     null!,
                     MakePipeline(),
                     FakeFactory()));
@@ -34,7 +22,6 @@ namespace WorkR.Tests
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    EmptyServiceProvider.Instance,
                     new FakeTrigger(),
                     null!,
                     FakeFactory()));
@@ -45,7 +32,6 @@ namespace WorkR.Tests
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    EmptyServiceProvider.Instance,
                     new FakeTrigger(),
                     MakePipeline(),
                     null!));
@@ -142,16 +128,16 @@ namespace WorkR.Tests
         private static WorkerService<FakeTrigger, EmptyTriggerContext> Create(
             FakeTrigger? trigger = null,
             FakeLoggerProvider? loggerProvider = null) =>
-            new(EmptyServiceProvider.Instance,
-                trigger ?? new FakeTrigger(),
+            new(trigger ?? new FakeTrigger(),
                 MakePipeline(),
                 new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
 
         private static LoggerFactory FakeFactory() =>
             new([new FakeLoggerProvider()]);
 
-        private static WorkerPipelineBuilder<EmptyTriggerContext> MakePipeline() =>
-            new(["FakeWorker"], (_, _, _) => Task.CompletedTask);
+        private static IWorkerPipeline<EmptyTriggerContext> MakePipeline() =>
+            new WorkerPipelineBuilder<EmptyTriggerContext>(["FakeWorker"], (_, _, _) => Task.CompletedTask)
+                .Build(EmptyServiceProvider.Instance);
 
         private sealed class EmptyServiceProvider : IServiceProvider
         {
