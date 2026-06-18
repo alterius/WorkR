@@ -22,7 +22,7 @@ namespace WorkR.Tests
             var second = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             var serviceId = Guid.NewGuid();
             var pipeline = Create(
-                TestPipeline.Named("FakeWorker"),
+                Pipeline("FakeWorker"),
                 trigger: trigger,
                 serviceId: serviceId,
                 workerVersion: WorkRVersion,
@@ -50,7 +50,7 @@ namespace WorkR.Tests
             var activities = new List<Activity>();
             using var listener = Listen(activities);
 
-            var pipeline = Create(TestPipeline.Named(["FakeWorker", "OtherFakeWorker"]), trigger: trigger);
+            var pipeline = Create(Pipeline("FakeWorker -> OtherFakeWorker"), trigger: trigger);
 
             await pipeline.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), TestContext.Current.CancellationToken);
 
@@ -66,7 +66,7 @@ namespace WorkR.Tests
             var activities = new List<Activity>();
             using var listener = Listen(activities);
 
-            var pipeline = Create(TestPipeline.Named("GenericFakeWorker<string>"), trigger: trigger);
+            var pipeline = Create(Pipeline("GenericFakeWorker<string>"), trigger: trigger);
 
             await pipeline.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), TestContext.Current.CancellationToken);
 
@@ -83,7 +83,7 @@ namespace WorkR.Tests
             using var listener = Listen(activities);
 
             var pipeline = Create(
-                TestPipeline.Named("FakeWorker", (_, _) => throw new InvalidOperationException("boom")),
+                Pipeline("FakeWorker", (_, _) => throw new InvalidOperationException("boom")),
                 trigger: trigger);
 
             var caught = await Should.ThrowAsync<InvalidOperationException>(() =>
@@ -107,7 +107,7 @@ namespace WorkR.Tests
             using var executionCts = new CancellationTokenSource();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
             var pipeline = Create(
-                TestPipeline.Named("FakeWorker", (_, ct) =>
+                Pipeline("FakeWorker", (_, ct) =>
                 {
                     executionCts.Cancel();
                     ct.ThrowIfCancellationRequested();
@@ -129,7 +129,7 @@ namespace WorkR.Tests
         {
             Activity? observed = null;
             var executed = false;
-            var pipeline = Create(TestPipeline.Named("FakeWorker", (_, _) =>
+            var pipeline = Create(Pipeline("FakeWorker", (_, _) =>
             {
                 observed = Activity.Current;
                 executed = true;
@@ -147,7 +147,7 @@ namespace WorkR.Tests
         {
             var logger = new FakeLogger();
             var context = new EmptyTriggerContext(DateTimeOffset.UtcNow);
-            var pipeline = Create(TestPipeline.Named(), logger);
+            var pipeline = Create(Pipeline(), logger);
 
             await pipeline.ExecuteAsync(context, TestContext.Current.CancellationToken);
 
@@ -169,7 +169,7 @@ namespace WorkR.Tests
         {
             var logger = new FakeLogger();
             var pipeline = Create(
-                TestPipeline.Named("FakeWorker", (_, _) => throw new InvalidOperationException("boom")),
+                Pipeline("FakeWorker", (_, _) => throw new InvalidOperationException("boom")),
                 logger);
 
             await Should.ThrowAsync<InvalidOperationException>(() =>
@@ -186,7 +186,7 @@ namespace WorkR.Tests
             var logger = new FakeLogger();
             using var executionCts = new CancellationTokenSource();
             var pipeline = Create(
-                TestPipeline.Named("FakeWorker", (_, ct) =>
+                Pipeline("FakeWorker", (_, ct) =>
                 {
                     executionCts.Cancel();
                     ct.ThrowIfCancellationRequested();
@@ -212,6 +212,11 @@ namespace WorkR.Tests
             string workerVersion = "1.0.0.0",
             string triggerVersion = "1.0.0.0") =>
             new(inner, logger ?? NullLogger.Instance, serviceId ?? Guid.NewGuid(), workerVersion, trigger, triggerVersion);
+
+        private static DelegateWorkerPipeline<EmptyTriggerContext> Pipeline(
+            string name = "FakeWorker",
+            Func<EmptyTriggerContext, CancellationToken, Task>? run = null) =>
+            new(name, run ?? ((_, _) => Task.CompletedTask));
 
         // The ActivitySource is process-wide, so isolate each test by a unique trigger tag.
         private static string NewMarker() => Guid.NewGuid().ToString();

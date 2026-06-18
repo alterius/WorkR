@@ -32,11 +32,12 @@ namespace WorkR.Tests
         [Fact]
         public void WorkerPipelineFinal_Name_JoinsProvidedNames()
         {
+            using var sp = new ServiceCollection().BuildServiceProvider();
             var pipeline = new WorkerPipelineBuilder<string>(
                 ["UpperCaseWorker", "CapturingWorker"],
                 (_, _, _) => Task.CompletedTask);
 
-            pipeline.Build(null!).Name.ShouldBe("UpperCaseWorker -> CapturingWorker");
+            pipeline.Build(sp).Name.ShouldBe("UpperCaseWorker -> CapturingWorker");
         }
 
         [Fact]
@@ -171,11 +172,12 @@ namespace WorkR.Tests
         [Fact]
         public void Compose_RecordsWorkerNamesInPipelineOrder()
         {
+            using var sp = new ServiceCollection().BuildServiceProvider();
             var pipeline = WorkerPipelineBuilder.Create<string>()
                 .Then<string>("upper", (sp, value, next, ct) => next(sp, value, ct))
                 .Finally("capture", (sp, value, ct) => Task.CompletedTask);
 
-            pipeline.Build(null!).Name.ShouldBe("upper -> capture");
+            pipeline.Build(sp).Name.ShouldBe("upper -> capture");
         }
 
         [Fact]

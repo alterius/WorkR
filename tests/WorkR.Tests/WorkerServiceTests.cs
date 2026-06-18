@@ -13,7 +13,7 @@ namespace WorkR.Tests
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
                     null!,
-                    TestPipeline.Named(),
+                    Pipeline(),
                     FakeFactory()));
         }
 
@@ -33,7 +33,7 @@ namespace WorkR.Tests
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
                     new FakeTrigger(),
-                    TestPipeline.Named(),
+                    Pipeline(),
                     null!));
         }
 
@@ -154,10 +154,13 @@ namespace WorkR.Tests
             FakeTrigger? trigger = null,
             FakeLoggerProvider? loggerProvider = null) =>
             new(trigger ?? new FakeTrigger(),
-                TestPipeline.Named(),
+                Pipeline(),
                 new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
 
         private static LoggerFactory FakeFactory() =>
             new([new FakeLoggerProvider()]);
+
+        private static DelegateWorkerPipeline<EmptyTriggerContext> Pipeline(string name = "FakeWorker") =>
+            new(name, (_, _) => Task.CompletedTask);
     }
 }
