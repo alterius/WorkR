@@ -43,6 +43,7 @@ namespace WorkR.Tests
         public async Task Build_ReturnsDelegate_ThatInvokesPipeline()
         {
             var called = false;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
             var pipeline = new WorkerPipelineBuilder<string>(
                 ["CapturingWorker"],
                 (sp, value, ct) =>
@@ -51,33 +52,40 @@ namespace WorkR.Tests
                     return Task.CompletedTask;
                 });
 
-            await pipeline.Build(null!).ExecuteAsync("hello", TestContext.Current.CancellationToken);
+            await pipeline.Build(sp).ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             called.ShouldBeTrue();
         }
 
         [Fact]
-        public async Task Build_PassesServiceProviderToPipeline()
+        public async Task Build_CreatesNewScopePerExecution()
         {
-            IServiceProvider? captured = null;
+            var captured = new List<IServiceProvider>();
             await using var sp = new ServiceCollection().BuildServiceProvider();
             var pipeline = new WorkerPipelineBuilder<string>(
                 ["CapturingWorker"],
                 (serviceProvider, _, _) =>
                 {
-                    captured = serviceProvider;
+                    captured.Add(serviceProvider);
                     return Task.CompletedTask;
                 });
 
-            await pipeline.Build(sp).ExecuteAsync("hello", TestContext.Current.CancellationToken);
+            var del = pipeline.Build(sp);
+            await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
+            await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
-            captured.ShouldBeSameAs(sp);
+            // Each execution runs in its own scope, distinct from the root provider and each other.
+            captured.Count.ShouldBe(2);
+            captured[0].ShouldNotBeSameAs(sp);
+            captured[1].ShouldNotBeSameAs(sp);
+            captured[0].ShouldNotBeSameAs(captured[1]);
         }
 
         [Fact]
         public async Task Build_PassesValueToPipeline()
         {
             string? captured = null;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
             var pipeline = new WorkerPipelineBuilder<string>(
                 ["CapturingWorker"],
                 (_, value, _) =>
@@ -86,7 +94,7 @@ namespace WorkR.Tests
                     return Task.CompletedTask;
                 });
 
-            await pipeline.Build(null!).ExecuteAsync("hello", TestContext.Current.CancellationToken);
+            await pipeline.Build(sp).ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             captured.ShouldBe("hello");
         }
@@ -106,6 +114,7 @@ namespace WorkR.Tests
         public async Task Create_ProducesPassthroughPipeline()
         {
             string? captured = null;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
 
             var del = WorkerPipelineBuilder.Create<string>()
                 .Finally("capture", (sp, value, ct) =>
@@ -113,7 +122,7 @@ namespace WorkR.Tests
                     captured = value;
                     return Task.CompletedTask;
                 })
-                .Build(null!);
+                .Build(sp);
 
             await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
@@ -124,6 +133,7 @@ namespace WorkR.Tests
         public async Task Then_TransformsValueBeforeNextStage()
         {
             string? captured = null;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
 
             var del = WorkerPipelineBuilder.Create<string>()
                 .Then<string>("upper", (sp, value, next, ct) => next(sp, value.ToUpper(), ct))
@@ -132,7 +142,7 @@ namespace WorkR.Tests
                     captured = value;
                     return Task.CompletedTask;
                 })
-                .Build(null!);
+                .Build(sp);
 
             await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
@@ -143,6 +153,7 @@ namespace WorkR.Tests
         public async Task Finally_CallsTerminalStepWithValue()
         {
             string? captured = null;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
 
             var del = WorkerPipelineBuilder.Create<string>()
                 .Finally("capture", (sp, value, ct) =>
@@ -150,7 +161,7 @@ namespace WorkR.Tests
                     captured = value;
                     return Task.CompletedTask;
                 })
-                .Build(null!);
+                .Build(sp);
 
             await del.ExecuteAsync("world", TestContext.Current.CancellationToken);
 
@@ -171,12 +182,13 @@ namespace WorkR.Tests
         public async Task Then_AppliesMiddlewareAroundStep()
         {
             var middlewareCalled = false;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
 
             var del = WorkerPipelineBuilder.Create<string>()
                 .Then<string>("upper", (sp, value, next, ct) => next(sp, value, ct),
                     mw => mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
                 .Finally("capture", (sp, value, ct) => Task.CompletedTask)
-                .Build(null!);
+                .Build(sp);
 
             await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
@@ -187,11 +199,12 @@ namespace WorkR.Tests
         public async Task Finally_AppliesMiddlewareAroundStep()
         {
             var middlewareCalled = false;
+            await using var sp = new ServiceCollection().BuildServiceProvider();
 
             var del = WorkerPipelineBuilder.Create<string>()
                 .Finally("capture", (sp, value, ct) => Task.CompletedTask,
                     mw => mw.UseMiddleware(new CallbackMiddleware(() => middlewareCalled = true)))
-                .Build(null!);
+                .Build(sp);
 
             await del.ExecuteAsync("hello", TestContext.Current.CancellationToken);
 

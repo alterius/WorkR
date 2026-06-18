@@ -202,42 +202,23 @@ namespace WorkR.Tests
         }
 
         [Fact]
-        public async Task AddWorker_WithDefaultMiddleware_AppliesItWhenNoExplicitMiddlewareGiven()
+        public async Task AddWorker_WithExplicitMiddleware_AppliesIt()
         {
-            var defaultCalled = false;
-            var services = new ServiceCollection().AddSingleton<FakeTerminalWorker>();
-            var builder = CreateBuilder(services,
-                defaultMiddleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => defaultCalled = true)));
-
-            var pipeline = builder.AddWorker<FakeTerminalWorker>();
-            await using var sp = services.BuildServiceProvider();
-            await pipeline.Build(sp).ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
-
-            defaultCalled.ShouldBeTrue();
-        }
-
-        [Fact]
-        public async Task AddWorker_WithDefaultAndExplicitMiddleware_AppliesBoth()
-        {
-            var defaultCalled = false;
             var explicitCalled = false;
             var services = new ServiceCollection().AddSingleton<FakeTerminalWorker>();
-            var builder = CreateBuilder(services,
-                defaultMiddleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => defaultCalled = true)));
+            var builder = CreateBuilder(services);
 
             var pipeline = builder.AddWorker<FakeTerminalWorker>(
                 middleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => explicitCalled = true)));
             await using var sp = services.BuildServiceProvider();
             await pipeline.Build(sp).ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
-            defaultCalled.ShouldBeTrue();
             explicitCalled.ShouldBeTrue();
         }
 
         private static WorkerRegistrationBuilder<FakeTrigger, EmptyTriggerContext> CreateBuilder(
-            IServiceCollection services,
-            Action<WorkerMiddlewarePipelineBuilder>? defaultMiddleware = null) =>
-            new(services, WorkerPipelineBuilder.Create<EmptyTriggerContext>(), defaultMiddleware);
+            IServiceCollection services) =>
+            new(services, WorkerPipelineBuilder.Create<EmptyTriggerContext>());
 
         private sealed class FakeTerminalWorker : IWorker<EmptyTriggerContext>
         {

@@ -59,7 +59,7 @@ Fires the pipeline exactly once when the host starts. Useful for startup tasks, 
 builder.Services.AddRunOnceWorker<MyStartupWorker>();
 ```
 
-Default middleware: `UseScope`. This is applied to the first worker in the chain only — workers in a chain inherit the scope but have no additional middleware unless configured explicitly.
+Each pipeline execution runs inside its own dependency injection scope, created automatically. Scoped services resolved during the execution share that scope and are disposed when the execution completes.
 
 ---
 
@@ -179,13 +179,7 @@ the container disposes it, or manage disposal yourself.
 
 Middleware is configured per worker step using `WorkerMiddlewarePipelineBuilder`. It wraps worker execution and is applied in registration order (outermost first).
 
-### `UseScope`
-
-Creates a new `IServiceScope` per execution. Workers downstream of `UseScope` resolve their dependencies from the scoped container.
-
-```csharp
-middleware.UseScope()
-```
+> **Note:** Every pipeline execution already runs inside its own dependency injection scope, created automatically. You do not need to add any middleware to obtain a scope — scoped services resolved during an execution share that scope and are disposed when the execution completes.
 
 ### `UseErrorHandling`
 
@@ -236,7 +230,6 @@ A typical ordering:
 
 ```csharp
 middleware
-    .UseScope()                            // create DI scope for this execution
     .UseErrorHandling<Exception>()         // catch any exceptions from this or subsequent workers
     .UseTimeout(TimeSpan.FromSeconds(30))  // cancel if too slow
 ```

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using WorkR.Middleware;
 
 namespace WorkR
 {
@@ -10,8 +9,7 @@ namespace WorkR
         public static IServiceCollection AddWorker<TTrigger, TContext>(
             this IServiceCollection services,
             Func<IServiceProvider, TTrigger> triggerFactory,
-            WorkerRegistration<TTrigger, TContext> builder,
-            Action<WorkerMiddlewarePipelineBuilder>? defaultMiddleware = null)
+            WorkerRegistration<TTrigger, TContext> builder)
                 where TTrigger : ITrigger<TContext>
                 where TContext : TriggerContext
         {
@@ -21,8 +19,7 @@ namespace WorkR
             var pipeline = builder(
                 new WorkerRegistrationBuilder<TTrigger, TContext>(
                     services,
-                    WorkerPipelineBuilder.Create<TContext>(),
-                    defaultMiddleware));
+                    WorkerPipelineBuilder.Create<TContext>()));
 
             return services.AddSingleton<IHostedService>(sp =>
                 new WorkerService<TTrigger, TContext>(

@@ -76,23 +76,6 @@ namespace WorkR.Tests.Middleware
             builder.UseTimeout(TimeSpan.FromSeconds(1)).ShouldBeSameAs(builder);
         }
 
-        [Fact]
-        public void UseInternalMiddleware_WithFactory_WhenFactoryIsNull_ThrowsArgumentNullException()
-        {
-            var builder = new WorkerMiddlewarePipelineBuilder();
-
-            Should.Throw<ArgumentNullException>(() =>
-                builder.UseInternalMiddleware((Func<IServiceProvider, ScopeMiddleware>)null!));
-        }
-
-        [Fact]
-        public void UseInternalMiddleware_WithFactory_ReturnsBuilderForChaining()
-        {
-            var builder = new WorkerMiddlewarePipelineBuilder();
-
-            builder.UseInternalMiddleware(_ => new ScopeMiddleware()).ShouldBeSameAs(builder);
-        }
-
         private sealed class NoopMiddleware : IWorkerMiddleware
         {
             public Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken) => next(cancellationToken);

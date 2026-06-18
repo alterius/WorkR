@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using WorkR.Middleware;
 
 namespace WorkR
@@ -100,7 +101,11 @@ namespace WorkR
         {
             return new DelegateWorkerPipeline<TIn>(
                 string.Join(" -> ", _workerNames),
-                (value, ct) => _pipeline(serviceProvider, value, ct));
+                async (value, ct) =>
+                {
+                    await using var scope = serviceProvider.CreateAsyncScope();
+                    await _pipeline(scope.ServiceProvider, value, ct);
+                });
         }
     }
 }
