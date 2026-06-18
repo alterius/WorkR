@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
@@ -98,6 +99,16 @@ namespace WorkR.Tests
             await pipeline.Build(sp).ExecuteAsync("hello", TestContext.Current.CancellationToken);
 
             captured.ShouldBe("hello");
+        }
+
+        [Fact]
+        public async Task Build_WithNullSerivceProvider_ThrowsException()
+        {
+            var pipeline = new WorkerPipelineBuilder<string>(
+                ["ThrowingWorker"],
+                (_, value, _) => Task.FromException(new Exception()));
+
+            Should.Throw<ArgumentNullException>(() => pipeline.Build(null!));
         }
 
         // WorkerPipelineBuilder<TIn, TOut> — internal class, internal constructor
