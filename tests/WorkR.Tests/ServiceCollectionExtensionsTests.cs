@@ -40,16 +40,5 @@ namespace WorkR.Tests
 
             services.ShouldContain(d => d.ServiceType == typeof(IHostedService));
         }
-
-        private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
-        {
-            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
-                Task.CompletedTask;
-        }
-
-        private sealed class FakeWorker : IWorker<EmptyTriggerContext>
-        {
-            public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
-        }
     }
 }

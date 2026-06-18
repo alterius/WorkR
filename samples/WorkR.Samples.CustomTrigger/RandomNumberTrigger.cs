@@ -12,7 +12,7 @@ namespace WorkR.Samples.CustomTrigger
             _timeProvider = timeProvider;
         }
 
-        public async Task ExecuteAsync(WorkerPipeline<ValueTriggerContext<int>> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(IWorkerPipeline<ValueTriggerContext<int>> workerPipeline, CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -20,7 +20,7 @@ namespace WorkR.Samples.CustomTrigger
                     _timeProvider.GetUtcNow(),
                     RandomNumberGenerator.GetInt32(100));
 
-                await workerPipeline(context, stoppingToken).ConfigureAwait(false);
+                await workerPipeline.ExecuteAsync(context, stoppingToken).ConfigureAwait(false);
 
                 var delay = RandomNumberGenerator.GetInt32(1000, 10000);
                 await Task.Delay(delay, stoppingToken).ConfigureAwait(false);

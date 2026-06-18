@@ -46,7 +46,7 @@ namespace WorkR.Triggers.AzureServiceBus
         {
         }
 
-        public async Task ExecuteAsync(WorkerPipeline<TContext> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(IWorkerPipeline<TContext> workerPipeline, CancellationToken stoppingToken)
         {
             _serviceBusProcessor.ProcessMessageAsync += async args =>
             {
@@ -89,7 +89,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     return;
                 }
 
-                await workerPipeline(context, args.CancellationToken).ConfigureAwait(false);
+                await workerPipeline.ExecuteAsync(context, args.CancellationToken).ConfigureAwait(false);
             };
 
             _serviceBusProcessor.ProcessErrorAsync += args =>
@@ -196,7 +196,7 @@ namespace WorkR.Triggers.AzureServiceBus
             _timeProvider = timeProvider;
         }
 
-        public Task ExecuteAsync(WorkerPipeline<ServiceBusTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
+        public Task ExecuteAsync(IWorkerPipeline<ServiceBusTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
             _inner.ExecuteAsync(workerPipeline, stoppingToken);
 
         public async ValueTask DisposeAsync()
@@ -267,7 +267,7 @@ namespace WorkR.Triggers.AzureServiceBus
             _timeProvider = timeProvider;
         }
 
-        public Task ExecuteAsync(WorkerPipeline<ServiceBusTriggerContext<T>> workerPipeline, CancellationToken stoppingToken) =>
+        public Task ExecuteAsync(IWorkerPipeline<ServiceBusTriggerContext<T>> workerPipeline, CancellationToken stoppingToken) =>
             _inner.ExecuteAsync(workerPipeline, stoppingToken);
 
         public async ValueTask DisposeAsync()

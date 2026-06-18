@@ -69,8 +69,8 @@ namespace WorkR.Tests
 
             await using var sp = services.BuildServiceProvider();
             var run = pipeline.Build(sp);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             instances.ShouldBe(2);
         }
@@ -91,8 +91,8 @@ namespace WorkR.Tests
 
             await using var sp = services.BuildServiceProvider();
             var run = pipeline.Build(sp);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             instances.ShouldBe(2);
         }
@@ -127,8 +127,8 @@ namespace WorkR.Tests
 
             await using var sp = services.BuildServiceProvider();
             var run = pipeline.Build(sp);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
-            await run(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await run.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             instances.ShouldBe(2);
         }
@@ -211,7 +211,7 @@ namespace WorkR.Tests
 
             var pipeline = builder.AddWorker<FakeTerminalWorker>();
             await using var sp = services.BuildServiceProvider();
-            await pipeline.Build(sp)(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await pipeline.Build(sp).ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             defaultCalled.ShouldBeTrue();
         }
@@ -228,7 +228,7 @@ namespace WorkR.Tests
             var pipeline = builder.AddWorker<FakeTerminalWorker>(
                 middleware: mw => mw.UseMiddleware(new RecordingMiddleware(() => explicitCalled = true)));
             await using var sp = services.BuildServiceProvider();
-            await pipeline.Build(sp)(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
+            await pipeline.Build(sp).ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), CancellationToken.None);
 
             defaultCalled.ShouldBeTrue();
             explicitCalled.ShouldBeTrue();
@@ -239,12 +239,6 @@ namespace WorkR.Tests
             Action<WorkerMiddlewarePipelineBuilder>? defaultMiddleware = null) =>
             new(services, WorkerPipelineBuilder.Create<EmptyTriggerContext>(), defaultMiddleware);
 
-        private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
-        {
-            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
-                Task.CompletedTask;
-        }
-
         private sealed class FakeTerminalWorker : IWorker<EmptyTriggerContext>
         {
             public Task ExecuteAsync(EmptyTriggerContext context, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -252,7 +246,7 @@ namespace WorkR.Tests
 
         private sealed class FakeTransformWorker : IWorker<EmptyTriggerContext, string>
         {
-            public Task ExecuteAsync(EmptyTriggerContext source, WorkerPipeline<string> next, CancellationToken cancellationToken) =>
+            public Task ExecuteAsync(EmptyTriggerContext source, Worker<string> next, CancellationToken cancellationToken) =>
                 next("result", cancellationToken);
         }
 
@@ -263,7 +257,7 @@ namespace WorkR.Tests
 
         private sealed class FakeStringTransformWorker : IWorker<string, int>
         {
-            public Task ExecuteAsync(string source, WorkerPipeline<int> next, CancellationToken cancellationToken) =>
+            public Task ExecuteAsync(string source, Worker<int> next, CancellationToken cancellationToken) =>
                 next(0, cancellationToken);
         }
 

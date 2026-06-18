@@ -72,13 +72,13 @@ namespace WorkR.Tests
 
         private sealed class StringProducerWorker : IWorker<EmptyTriggerContext, string>
         {
-            public Task ExecuteAsync(EmptyTriggerContext source, WorkerPipeline<string> next, CancellationToken cancellationToken) =>
+            public Task ExecuteAsync(EmptyTriggerContext source, Worker<string> next, CancellationToken cancellationToken) =>
                 next("hello", cancellationToken);
         }
 
         private sealed class UpperCaseWorker : IWorker<string, string>
         {
-            public Task ExecuteAsync(string source, WorkerPipeline<string> next, CancellationToken cancellationToken) =>
+            public Task ExecuteAsync(string source, Worker<string> next, CancellationToken cancellationToken) =>
                 next(source.ToUpper(), cancellationToken);
         }
 

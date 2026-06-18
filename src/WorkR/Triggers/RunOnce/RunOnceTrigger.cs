@@ -18,7 +18,7 @@ namespace WorkR.Triggers.RunOnce
             _logger = logger;
         }
 
-        public async Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
+        public async Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
         {
             _logger.LogInformation("Run once trigger initialised");
 
@@ -26,7 +26,7 @@ namespace WorkR.Triggers.RunOnce
 
             try
             {
-                await workerPipeline(context, stoppingToken).ConfigureAwait(false);
+                await workerPipeline.ExecuteAsync(context, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
                 when (stoppingToken.IsCancellationRequested)

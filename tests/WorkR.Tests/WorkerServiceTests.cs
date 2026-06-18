@@ -8,24 +8,12 @@ namespace WorkR.Tests
     public class WorkerServiceTests
     {
         [Fact]
-        public void Constructor_WhenServiceProviderIsNull_ThrowsArgumentNullException()
-        {
-            Should.Throw<ArgumentNullException>(() =>
-                new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    null!,
-                    new FakeTrigger(),
-                    MakePipeline(),
-                    FakeFactory()));
-        }
-
-        [Fact]
         public void Constructor_WhenTriggerIsNull_ThrowsArgumentNullException()
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    EmptyServiceProvider.Instance,
                     null!,
-                    MakePipeline(),
+                    TestPipeline.Named(),
                     FakeFactory()));
         }
 
@@ -34,7 +22,6 @@ namespace WorkR.Tests
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    EmptyServiceProvider.Instance,
                     new FakeTrigger(),
                     null!,
                     FakeFactory()));
@@ -45,9 +32,8 @@ namespace WorkR.Tests
         {
             Should.Throw<ArgumentNullException>(() =>
                 new WorkerService<FakeTrigger, EmptyTriggerContext>(
-                    EmptyServiceProvider.Instance,
                     new FakeTrigger(),
-                    MakePipeline(),
+                    TestPipeline.Named(),
                     null!));
         }
 
@@ -55,7 +41,7 @@ namespace WorkR.Tests
         public async Task ExecuteAsync_CallsTrigger()
         {
             var called = false;
-            var service = Create(new FakeTrigger((next, ct) =>
+            var service = Create(new FakeTrigger((_, _) =>
             {
                 called = true;
                 return Task.CompletedTask;
@@ -85,7 +71,7 @@ namespace WorkR.Tests
         public async Task ExecuteAsync_WhenCancelledDuringShutdown_DoesNotPropagate()
         {
             var triggerRunning = new SemaphoreSlim(0, 1);
-            var service = Create(new FakeTrigger(async (next, ct) =>
+            var service = Create(new FakeTrigger(async (_, ct) =>
             {
                 triggerRunning.Release();
                 await Task.Delay(Timeout.Infinite, ct);
@@ -104,7 +90,7 @@ namespace WorkR.Tests
             var provider = new FakeLoggerProvider();
             var triggerRunning = new SemaphoreSlim(0, 1);
             var service = Create(
-                new FakeTrigger(async (next, ct) =>
+                new FakeTrigger(async (_, ct) =>
                 {
                     triggerRunning.Release();
                     await Task.Delay(Timeout.Infinite, ct);
@@ -123,7 +109,7 @@ namespace WorkR.Tests
         [Fact]
         public async Task ExecuteAsync_WhenTriggerThrowsOperationCanceledException_WithoutCancelledToken_FaultsExecuteTask()
         {
-            var service = Create(new FakeTrigger((next, ct) =>
+            var service = Create(new FakeTrigger((_, _) =>
                 Task.FromException(new OperationCanceledException())));
 
             // .NET 10 no longer propagates a synchronously-faulted ExecuteAsync through StartAsync
@@ -139,45 +125,39 @@ namespace WorkR.Tests
                 service.ExecuteTask!.WaitAsync(TestContext.Current.CancellationToken));
         }
 
+        [Fact]
+        public async Task ExecuteAsync_BeginsServiceScopeWithVersionTriggerAndPipeline()
+        {
+            var provider = new FakeLoggerProvider();
+            var service = Create(loggerProvider: provider);
+
+            await service.StartAsync(TestContext.Current.CancellationToken);
+            await service.ExecuteTask!;
+
+            var starting = provider.Collector.GetSnapshot()
+                .Where(log => log.Message == "Worker service starting...")
+                .ShouldHaveSingleItem();
+
+            var scope = starting.Scopes
+                .OfType<IEnumerable<KeyValuePair<string, object?>>>()
+                .SelectMany(s => s)
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            scope["WorkRVersion"].ShouldBe(typeof(WorkerService<,>).Assembly.GetName().Version!.ToString());
+            scope["WorkerServiceId"].ShouldBeOfType<Guid>();
+            scope["Trigger"].ShouldBe(nameof(FakeTrigger));
+            scope["TriggerVersion"].ShouldBe(typeof(FakeTrigger).Assembly.GetName().Version!.ToString());
+            scope["WorkerPipeline"].ShouldBe("FakeWorker");
+        }
+
         private static WorkerService<FakeTrigger, EmptyTriggerContext> Create(
             FakeTrigger? trigger = null,
             FakeLoggerProvider? loggerProvider = null) =>
-            new(EmptyServiceProvider.Instance,
-                trigger ?? new FakeTrigger(),
-                MakePipeline(),
+            new(trigger ?? new FakeTrigger(),
+                TestPipeline.Named(),
                 new LoggerFactory([loggerProvider ?? new FakeLoggerProvider()]));
 
         private static LoggerFactory FakeFactory() =>
             new([new FakeLoggerProvider()]);
-
-        private static WorkerPipelineBuilder<EmptyTriggerContext> MakePipeline() =>
-            new(["FakeWorker"], (_, _, _) => Task.CompletedTask);
-
-        private sealed class EmptyServiceProvider : IServiceProvider
-        {
-            public static readonly EmptyServiceProvider Instance = new();
-
-            public object? GetService(Type serviceType) => null;
-        }
-
-        private sealed class FakeTrigger : ITrigger<EmptyTriggerContext>
-        {
-            private readonly Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task> _execute;
-
-            public FakeTrigger(
-                Func<WorkerPipeline<EmptyTriggerContext>, CancellationToken, Task>? execute = null)
-            {
-                _execute = execute ?? ((_, _) => Task.CompletedTask);
-            }
-
-            public Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken) =>
-                _execute(workerPipeline, stoppingToken);
-        }
-
-        private sealed class FakeWorker : IWorker<EmptyTriggerContext>
-        {
-            public Task ExecuteAsync(EmptyTriggerContext source, CancellationToken cancellationToken) =>
-                Task.CompletedTask;
-        }
     }
 }

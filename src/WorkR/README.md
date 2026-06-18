@@ -76,7 +76,7 @@ public class FetchWorker : IWorker<EmptyTriggerContext, IReadOnlyList<Order>>
 
     public async Task ExecuteAsync(
         EmptyTriggerContext context,
-        WorkerPipeline<IReadOnlyList<Order>> next,
+        Worker<IReadOnlyList<Order>> next,
         CancellationToken cancellationToken)
     {
         var orders = await _repo.GetPendingAsync(cancellationToken);
@@ -114,11 +114,11 @@ Implement `ITrigger<TContext>` to define a trigger with any execution model, the
 ```csharp
 public class MyTrigger : ITrigger<EmptyTriggerContext>
 {
-    public async Task ExecuteAsync(WorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
+    public async Task ExecuteAsync(IWorkerPipeline<EmptyTriggerContext> workerPipeline, CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            await workerPipeline(new EmptyTriggerContext(DateTimeOffset.UtcNow), stoppingToken);
+            await workerPipeline.ExecuteAsync(new EmptyTriggerContext(DateTimeOffset.UtcNow), stoppingToken);
             await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
         }
     }

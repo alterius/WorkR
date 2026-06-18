@@ -96,11 +96,11 @@ namespace WorkR
             _workerNames = workerNames;
         }
 
-        internal IReadOnlyList<string> WorkerNames => _workerNames;
-
-        internal WorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
+        internal INamedWorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
         {
-            return (value, ct) => _pipeline(serviceProvider, value, ct);
+            return new DelegateWorkerPipeline<TIn>(
+                string.Join(" -> ", _workerNames),
+                (value, ct) => _pipeline(serviceProvider, value, ct));
         }
     }
 }

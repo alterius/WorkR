@@ -31,11 +31,11 @@ A trigger owns the execution loop and is responsible for calling the downstream 
 public interface ITrigger<out TContext>
     where TContext : TriggerContext
 {
-    Task ExecuteAsync(WorkerPipeline<TContext> workerPipeline, CancellationToken stoppingToken);
+    Task ExecuteAsync(IWorkerPipeline<TContext> workerPipeline, CancellationToken stoppingToken);
 }
 ```
 
-Call `workerPipeline` to pass a context into the downstream worker chain. Triggers are long-lived singletons; the loop logic (polling, waiting, scheduling) lives entirely within `ExecuteAsync`.
+Call `workerPipeline.ExecuteAsync` to pass a context into the downstream worker chain. Triggers are long-lived singletons; the loop logic (polling, waiting, scheduling) lives entirely within `ExecuteAsync`.
 
 ### `IWorker<TIn>`
 
@@ -55,7 +55,7 @@ A transforming worker. Receives a value, performs optional work, and calls `next
 ```csharp
 public interface IWorker<in TIn, out TOut>
 {
-    Task ExecuteAsync(TIn source, WorkerPipeline<TOut> next, CancellationToken cancellationToken);
+    Task ExecuteAsync(TIn source, Worker<TOut> next, CancellationToken cancellationToken);
 }
 ```
 
@@ -123,13 +123,13 @@ public class MyQueueTrigger : ITrigger<MyQueueContext>
 
     public MyQueueTrigger(IMyQueue queue) => _queue = queue;
 
-    public async Task ExecuteAsync(WorkerPipeline<MyQueueContext> workerPipeline, CancellationToken stoppingToken)
+    public async Task ExecuteAsync(IWorkerPipeline<MyQueueContext> workerPipeline, CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
             var message = await _queue.ReceiveAsync(stoppingToken);
 
-            await workerPipeline(new MyQueueContext(
+            await workerPipeline.ExecuteAsync(new MyQueueContext(
                 DateTimeOffset.UtcNow,
                 message.Body,
                 message.MessageId), stoppingToken);
