@@ -21,9 +21,7 @@ namespace WorkR.Triggers.Timers
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<DelayTrigger>>(),
                     runOnStartup),
-                builder,
-                static mw => mw
-                    .UseScope());
+                builder);
         }
 
         public static IServiceCollection AddDelayWorker<TWorker>(
@@ -59,9 +57,7 @@ namespace WorkR.Triggers.Timers
                     sp.GetRequiredService<ILogger<ScheduledTrigger>>(),
                     runOnStartup,
                     cancelOnOverlap),
-                builder,
-                static mw => mw
-                    .UseScope());
+                builder);
         }
 
         public static IServiceCollection AddScheduledWorker<TWorker>(

@@ -8,9 +8,6 @@ namespace WorkR.Triggers.AzureServiceBus
 {
     public static class ServiceCollectionExtensions
     {
-        private static readonly Action<WorkerMiddlewarePipelineBuilder> _defaultMiddleware = static mw =>
-            mw.UseScope();
-
         public static IServiceCollection AddServiceBusWorker(
             this IServiceCollection services,
             Func<IServiceProvider, ServiceBusClient> clientFactory,
@@ -31,8 +28,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger>>(),
                     CreateOptions(configure)),
-                builder,
-                _defaultMiddleware);
+                builder);
         }
 
         public static IServiceCollection AddServiceBusWorker<TWorker>(
@@ -74,8 +70,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger>>(),
                     CreateOptions(configure)),
-                builder,
-                _defaultMiddleware);
+                builder);
         }
 
         public static IServiceCollection AddServiceBusWorker<TWorker>(
@@ -118,8 +113,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger<T>>>(),
                     CreateOptions(configure)),
-                builder,
-                _defaultMiddleware);
+                builder);
         }
 
         public static IServiceCollection AddServiceBusWorker<T, TWorker>(
@@ -165,8 +159,7 @@ namespace WorkR.Triggers.AzureServiceBus
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<ServiceBusTrigger<T>>>(),
                     CreateOptions(configure)),
-                builder,
-                _defaultMiddleware);
+                builder);
         }
 
         public static IServiceCollection AddServiceBusWorker<T, TWorker>(

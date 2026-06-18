@@ -17,9 +17,7 @@ namespace WorkR.Triggers.RunOnce
                 sp => new RunOnceTrigger(
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<RunOnceTrigger>>()),
-                builder,
-                static mw => mw
-                    .UseScope());
+                builder);
         }
 
         public static IServiceCollection AddRunOnceWorker<TWorker>(

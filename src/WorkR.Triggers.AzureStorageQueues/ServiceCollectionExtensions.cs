@@ -8,9 +8,6 @@ namespace WorkR.Triggers.AzureStorageQueues
 {
     public static class ServiceCollectionExtensions
     {
-        private static readonly Action<WorkerMiddlewarePipelineBuilder> _defaultMiddleware = static mw =>
-            mw.UseScope();
-
         public static IServiceCollection AddStorageQueueWorker(
             this IServiceCollection services,
             Func<IServiceProvider, QueueServiceClient> queueServiceClientFactory,
@@ -34,8 +31,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                     options,
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<StorageQueueTrigger>>()),
-                builder,
-                _defaultMiddleware);
+                builder);
         }
 
         public static IServiceCollection AddStorageQueueWorker<TWorker>(
@@ -79,8 +75,7 @@ namespace WorkR.Triggers.AzureStorageQueues
                     deserializerFactory?.Invoke(sp) ?? StorageQueueMessageDeserializers.Json<T>(),
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetRequiredService<ILogger<StorageQueueTrigger<T>>>()),
-                builder,
-                _defaultMiddleware);
+                builder);
         }
 
         public static IServiceCollection AddStorageQueueWorker<T, TWorker>(

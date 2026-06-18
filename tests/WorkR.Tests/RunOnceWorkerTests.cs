@@ -36,7 +36,7 @@ namespace WorkR.Tests
         }
 
         [Fact]
-        public async Task RunOnce_WhenWorkerThrows_ErrorSwallowedByDefaultMiddleware()
+        public async Task RunOnce_WhenWorkerThrows_ErrorSwallowedByTrigger()
         {
             var workerRan = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 

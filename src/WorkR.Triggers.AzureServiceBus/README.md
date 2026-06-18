@@ -173,4 +173,4 @@ builder.Services.AddServiceBusWorker<OrderCreated>(
         .AddWorker<PersistWorker>());
 ```
 
-Default middleware: `UseScope`. Applied to the first worker in the chain only.
+Each pipeline execution runs inside its own dependency injection scope, created automatically.

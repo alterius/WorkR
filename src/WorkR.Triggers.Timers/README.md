@@ -47,7 +47,7 @@ builder.Services.AddDelayWorker(
         .AddWorker<ProcessWorker>());
 ```
 
-Default middleware: `UseScope`. Applied to the first worker in the chain only.
+Each pipeline execution runs inside its own dependency injection scope, created automatically.
 
 ---
 
@@ -102,7 +102,7 @@ builder.Services.AddScheduledWorker(
         .AddWorker<ProcessWorker>());
 ```
 
-Default middleware: `UseScope`. Applied to the first worker in the chain only.
+Each pipeline execution runs inside its own dependency injection scope, created automatically.
 
 > `ScheduledTrigger` fires worker executions on the thread pool so that a long-running execution does not delay the next scheduled firing.
 
