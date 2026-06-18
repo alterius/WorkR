@@ -52,10 +52,8 @@ namespace WorkR.Triggers.AzureServiceBus
             {
                 var executionId = Guid.NewGuid();
 
-                using var _ = _logger.BeginScope(new Dictionary<string, object?>
-                {
-                    ["MessageId"] = args.Message.MessageId,
-                });
+                using var _ = _logger.BeginScope(
+                    new LogScope("MessageId", args.Message.MessageId));
 
                 TContext context;
 
@@ -112,10 +110,8 @@ namespace WorkR.Triggers.AzureServiceBus
                 return Task.CompletedTask;
             };
 
-            using var _ = _logger.BeginScope(new Dictionary<string, object?>
-            {
-                ["EntityPath"] = _serviceBusProcessor.EntityPath
-            });
+            using var _ = _logger.BeginScope(
+                new LogScope("EntityPath", _serviceBusProcessor.EntityPath));
 
             _logger.LogInformation("Service bus trigger initialised");
 

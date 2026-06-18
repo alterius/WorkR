@@ -34,15 +34,12 @@ namespace WorkR
             var triggerName = TypeNameHelper.GetTypeDisplayName(typeof(TTrigger), fullName: false);
             var triggerVersion = typeof(TTrigger).Assembly.GetName().Version?.ToString() ?? "unknown";
 
-            using var _ = _logger.BeginScope(
-                new Dictionary<string, object?>
-                {
-                    ["WorkRVersion"] = workerVersion,
-                    ["WorkerServiceId"] = _workerServiceId,
-                    ["Trigger"] = triggerName,
-                    ["TriggerVersion"] = triggerVersion,
-                    ["WorkerPipeline"] = _pipeline.Name
-                });
+            using var _ = _logger.BeginScope(new LogScope(
+                new("WorkRVersion", workerVersion),
+                new("WorkerServiceId", _workerServiceId),
+                new("Trigger", triggerName),
+                new("TriggerVersion", triggerVersion),
+                new("WorkerPipeline", _pipeline.Name)));
 
             _logger.LogInformation("Worker service starting...");
 
