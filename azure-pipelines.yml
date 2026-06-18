@@ -13,7 +13,7 @@ pool:
 
 variables:
   major: 0
-  minor: 6
+  minor: 7
 
 name: $(major).$(minor).$(Rev:r)
 
