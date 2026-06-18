@@ -25,6 +25,28 @@ namespace WorkR.Tests.Middleware
         }
 
         [Fact]
+        public async Task ExecuteAsync_DoesNotResolveRootServiceProvider()
+        {
+            await using var rootSp = new ServiceCollection().BuildServiceProvider();
+            var middleware = new ScopeMiddleware();
+
+            var resolvedRootSp = rootSp.GetRequiredService<IServiceProvider>();
+            IServiceProvider? capturedServiceProvider = null;
+            IServiceProvider? resolvedServiceProvider = null;
+
+            await middleware.ExecuteAsync(rootSp, (sp, ct) =>
+            {
+                capturedServiceProvider = sp;
+                resolvedServiceProvider = sp.GetRequiredService<IServiceProvider>();
+                return Task.CompletedTask;
+            }, TestContext.Current.CancellationToken);
+
+            capturedServiceProvider.ShouldNotBe(resolvedRootSp);
+            resolvedServiceProvider.ShouldNotBe(resolvedRootSp);
+            capturedServiceProvider.ShouldBe(resolvedServiceProvider);
+        }
+
+        [Fact]
         public async Task ExecuteAsync_DisposesScopeAfterNextCompletes()
         {
             var services = new ServiceCollection();

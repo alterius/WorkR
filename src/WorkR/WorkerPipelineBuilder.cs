@@ -99,6 +99,8 @@ namespace WorkR
 
         internal INamedWorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
         {
+            ArgumentNullException.ThrowIfNull(serviceProvider);
+
             return new DelegateWorkerPipeline<TIn>(
                 string.Join(" -> ", _workerNames),
                 async (value, ct) =>
