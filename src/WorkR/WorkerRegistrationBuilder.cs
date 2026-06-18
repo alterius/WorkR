@@ -12,7 +12,7 @@ namespace WorkR
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {
-        private readonly WorkerPipelineBuilder<TTrigger, TContext, TContext> _builder;
+        private readonly WorkerRegistrationBuilder<TTrigger, TContext, TContext> _builder;
 
         internal WorkerRegistrationBuilder(
             IServiceCollection services,
@@ -21,16 +21,16 @@ namespace WorkR
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(builder);
 
-            _builder = new WorkerPipelineBuilder<TTrigger, TContext, TContext>(services, builder);
+            _builder = new WorkerRegistrationBuilder<TTrigger, TContext, TContext>(services, builder);
         }
 
-        public WorkerPipelineBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
+        public WorkerRegistrationBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
             ServiceLifetime? lifetime = ServiceLifetime.Transient,
             Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TContext, TOut> =>
                     _builder.AddWorker<TWorker, TOut>(lifetime, middleware);
 
-        public WorkerPipelineBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
+        public WorkerRegistrationBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
             Func<IServiceProvider, TWorker> factory,
             Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TContext, TOut> =>
@@ -49,14 +49,14 @@ namespace WorkR
                     _builder.AddWorker(factory, middleware);
     }
 
-    public sealed class WorkerPipelineBuilder<TTrigger, TContext, TOut>
+    public sealed class WorkerRegistrationBuilder<TTrigger, TContext, TOut>
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext
     {
         private readonly IServiceCollection _services;
         private readonly WorkerPipelineBuilder<TContext, TOut> _pipeline;
 
-        internal WorkerPipelineBuilder(
+        internal WorkerRegistrationBuilder(
             IServiceCollection services,
             WorkerPipelineBuilder<TContext, TOut> pipeline)
         {
@@ -67,7 +67,7 @@ namespace WorkR
             _pipeline = pipeline;
         }
 
-        public WorkerPipelineBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
+        public WorkerRegistrationBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
             ServiceLifetime? lifetime = ServiceLifetime.Transient,
             Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut, TNext>
@@ -76,7 +76,7 @@ namespace WorkR
             return Then<TWorker, TNext>(sp => sp.GetRequiredService<TWorker>(), middleware);
         }
 
-        public WorkerPipelineBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
+        public WorkerRegistrationBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
             Func<IServiceProvider, TWorker> factory,
             Action<WorkerMiddlewarePipelineBuilder>? middleware = null)
                 where TWorker : IWorker<TOut, TNext> =>
@@ -97,7 +97,7 @@ namespace WorkR
                 where TWorker : IWorker<TOut> =>
                     Finally(factory, middleware);
 
-        private WorkerPipelineBuilder<TTrigger, TContext, TNext> Then<TWorker, TNext>(
+        private WorkerRegistrationBuilder<TTrigger, TContext, TNext> Then<TWorker, TNext>(
             Func<IServiceProvider, TWorker> workerFactory,
             Action<WorkerMiddlewarePipelineBuilder>? middleware)
                 where TWorker : IWorker<TOut, TNext>
@@ -106,7 +106,8 @@ namespace WorkR
                 WorkerName<TWorker>(),
                 (sp, value, next, ct) => workerFactory(sp).ExecuteAsync(value, (v, ct2) => next(sp, v, ct2), ct),
                 middleware);
-            return new WorkerPipelineBuilder<TTrigger, TContext, TNext>(_services, builder);
+
+            return new WorkerRegistrationBuilder<TTrigger, TContext, TNext>(_services, builder);
         }
 
         private WorkerPipelineBuilder<TContext> Finally<TWorker>(
@@ -118,9 +119,6 @@ namespace WorkR
                         (sp, value, ct) => workerFactory(sp).ExecuteAsync(value, ct),
                         middleware);
 
-        private static string WorkerName<TWorker>() =>
-            TypeNameHelper.GetTypeDisplayName(typeof(TWorker), fullName: false);
-
         private void TryRegister<TWorker>(ServiceLifetime? lifetime)
         {
             if (lifetime.HasValue)
@@ -129,5 +127,8 @@ namespace WorkR
                 _services.TryAdd(descriptor);
             }
         }
+
+        private static string WorkerName<TWorker>() =>
+            TypeNameHelper.GetTypeDisplayName(typeof(TWorker), fullName: false);
     }
 }
