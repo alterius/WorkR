@@ -179,7 +179,15 @@ the container disposes it, or manage disposal yourself.
 
 Middleware is configured per worker step using `WorkerMiddlewarePipelineBuilder`. It wraps worker execution and is applied in registration order (outermost first).
 
-> **Note:** Every pipeline execution already runs inside its own dependency injection scope, created automatically. You do not need to add any middleware to obtain a scope — scoped services resolved during an execution share that scope and are disposed when the execution completes.
+> **Note:** Every pipeline execution already runs inside its own dependency injection scope, created automatically. You do not need `UseScope` to obtain a scope — scoped services resolved during an execution share that scope and are disposed when the execution completes.
+
+### `UseScope`
+
+Creates a new `IServiceScope` per execution. Workers downstream of `UseScope` resolve their dependencies from the scoped container. This is rarely needed now that each execution already runs in its own scope, but remains available for nesting an additional scope.
+
+```csharp
+middleware.UseScope()
+```
 
 ### `UseErrorHandling`
 

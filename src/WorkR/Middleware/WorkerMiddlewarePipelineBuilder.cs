@@ -42,6 +42,32 @@ namespace WorkR.Middleware
         public WorkerMiddlewarePipelineBuilder UseTimeout(TimeSpan timeout) =>
             UseMiddleware(sp => new TimeoutMiddleware(sp.GetRequiredService<TimeProvider>(), timeout));
 
+        public WorkerMiddlewarePipelineBuilder UseScope() =>
+            UseInternalMiddleware(new ScopeMiddleware());
+
+        internal WorkerMiddlewarePipelineBuilder UseInternalMiddleware<TMiddleware>(Func<IServiceProvider, TMiddleware> factory)
+            where TMiddleware : IInternalWorkerMiddleware
+        {
+            ArgumentNullException.ThrowIfNull(factory);
+
+            _middleware.Add(next => (sp, ct) =>
+            {
+                var middleware = factory(sp);
+                return middleware.ExecuteAsync(sp, next, ct);
+            });
+
+            return this;
+        }
+
+        internal WorkerMiddlewarePipelineBuilder UseInternalMiddleware(IInternalWorkerMiddleware middleware)
+        {
+            ArgumentNullException.ThrowIfNull(middleware);
+
+            _middleware.Add(next => (sp, ct) => middleware.ExecuteAsync(sp, next, ct));
+
+            return this;
+        }
+
         internal WorkerMiddlewarePipeline Build()
         {
             var middleware = _middleware.ToArray();
