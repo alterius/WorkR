@@ -39,7 +39,8 @@ namespace WorkR.Triggers.AzureStorageQueues
 
         public async Task ExecuteAsync(IWorkerPipeline<TContext> workerPipeline, CancellationToken stoppingToken)
         {
-            using var _ = _logger.BeginScope(new Dictionary<string, object?> { ["QueueName"] = _queueClient.Name });
+            using var _ = _logger.BeginScope(
+                new LogScope("QueueName", _queueClient.Name));
 
             _logger.LogInformation("Storage queue trigger initialised");
 
@@ -113,10 +114,8 @@ namespace WorkR.Triggers.AzureStorageQueues
                                 executionId,
                                 Task.Run(async () =>
                                 {
-                                    using var __ = _logger.BeginScope(new Dictionary<string, object?>
-                                    {
-                                        ["MessageId"] = message.MessageId,
-                                    });
+                                    using var __ = _logger.BeginScope(
+                                        new LogScope("MessageId", message.MessageId));
 
                                     try
                                     {
