@@ -1,10 +1,12 @@
 ﻿namespace WorkR.Middleware
 {
     /// <summary>
-    /// Middleware that cancels downstream worker execution if it runs longer than a specified
-    /// timeout. It links a timeout-based token with the incoming cancellation token and passes
-    /// the combined token downstream.
+    /// Middleware that cancels downstream execution if it runs longer than a specified timeout.
     /// </summary>
+    /// <remarks>
+    /// A timeout token is linked with the incoming cancellation token, and the combined token is
+    /// passed downstream.
+    /// </remarks>
     public sealed class TimeoutMiddleware : IWorkerMiddleware
     {
         private readonly TimeProvider _timeProvider;

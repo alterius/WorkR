@@ -5,27 +5,19 @@ using Microsoft.Extensions.Logging;
 namespace WorkR
 {
     /// <summary>
-    /// Extension methods for registering WorkR workers and triggers with an
-    /// <see cref="IServiceCollection"/>.
+    /// Extension methods for registering WorkR workers and triggers.
     /// </summary>
     public static class ServiceCollectionExtensions
     {
         /// <summary>
-        /// Registers a hosted worker service driven by the specified trigger, building its
-        /// worker pipeline with the supplied configuration callback.
+        /// Registers a hosted worker service driven by the specified trigger.
         /// </summary>
-        /// <typeparam name="TTrigger">The trigger type that owns the execution loop.</typeparam>
+        /// <typeparam name="TTrigger">The trigger type.</typeparam>
         /// <typeparam name="TContext">The context type the trigger produces.</typeparam>
-        /// <param name="services">The service collection to add the worker service to.</param>
-        /// <param name="triggerFactory">
-        /// A factory that creates the trigger instance from the application's service provider.
-        /// Invoked once when the hosted service is constructed.
-        /// </param>
-        /// <param name="builder">
-        /// A callback that composes the worker pipeline using the supplied
-        /// <see cref="WorkerRegistrationBuilder{TTrigger, TContext}"/>.
-        /// </param>
-        /// <returns>The same <paramref name="services"/> instance, to allow chaining.</returns>
+        /// <param name="services">The service collection.</param>
+        /// <param name="triggerFactory">A factory that creates the trigger, invoked once when the service is constructed.</param>
+        /// <param name="builder">A callback that composes the worker pipeline.</param>
+        /// <returns>The same <paramref name="services"/> instance.</returns>
         /// <exception cref="ArgumentNullException">
         /// <paramref name="triggerFactory"/> or <paramref name="builder"/> is <see langword="null"/>.
         /// </exception>

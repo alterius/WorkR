@@ -3,6 +3,10 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR
 {
+    /// <summary>
+    /// The <see cref="BackgroundService"/> host that runs a trigger and its worker pipeline,
+    /// establishing the per-service log scope and wrapping the pipeline with telemetry.
+    /// </summary>
     internal sealed class WorkerService<TTrigger, TContext> : BackgroundService
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext

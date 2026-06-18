@@ -3,9 +3,8 @@
 namespace WorkR.Middleware
 {
     /// <summary>
-    /// Middleware that catches and logs exceptions of type <typeparamref name="TException"/>
-    /// thrown by downstream workers, preventing a failing execution from propagating. An
-    /// optional predicate narrows which exceptions are handled.
+    /// Middleware that catches and logs downstream exceptions of type
+    /// <typeparamref name="TException"/>, optionally filtered by a predicate.
     /// </summary>
     /// <typeparam name="TException">The exception type to catch.</typeparam>
     public sealed class ErrorHandlingMiddleware<TException> : IWorkerMiddleware
@@ -19,10 +18,8 @@ namespace WorkR.Middleware
         /// </summary>
         /// <param name="logger">The logger used to record handled exceptions.</param>
         /// <param name="predicate">
-        /// An optional filter applied to a caught exception. When it returns <see langword="true"/>
-        /// the exception is handled and logged; when it returns <see langword="false"/> the
-        /// exception is rethrown. When <see langword="null"/>, all exceptions of
-        /// <typeparamref name="TException"/> are handled.
+        /// An optional filter for a caught exception. When it returns <see langword="false"/> the
+        /// exception is rethrown; when <see langword="null"/>, all matching exceptions are handled.
         /// </param>
         /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <see langword="null"/>.</exception>
         public ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware<TException>> logger, Func<TException, bool>? predicate = null)

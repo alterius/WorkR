@@ -3,6 +3,14 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR
 {
+    /// <summary>
+    /// Decorates a worker pipeline with telemetry: a tracing span per execution and debug/error
+    /// logging around the inner pipeline.
+    /// </summary>
+    /// <remarks>
+    /// Cancellation triggered by the stopping token is treated as expected shutdown and logged at
+    /// debug; other exceptions mark the span as failed and are logged as errors before rethrowing.
+    /// </remarks>
     internal sealed class TelemetryWorkerPipeline<TContext> : IWorkerPipeline<TContext>
         where TContext : TriggerContext
     {
@@ -84,6 +92,10 @@ namespace WorkR
             }
         }
 
+        /// <summary>
+        /// Records an exception on the activity, using the native API on .NET 9+ and an
+        /// equivalent event on earlier targets.
+        /// </summary>
         private static void AddException(Activity activity, Exception ex)
         {
 #if NET9_0_OR_GREATER

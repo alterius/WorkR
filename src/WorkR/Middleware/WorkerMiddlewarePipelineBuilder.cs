@@ -3,7 +3,14 @@ using Microsoft.Extensions.Logging;
 
 namespace WorkR.Middleware
 {
+    /// <summary>
+    /// The execution of a worker step within the current service provider.
+    /// </summary>
     internal delegate Task WorkerMiddleware(IServiceProvider serviceProvider, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// A composed middleware pipeline that wraps <paramref name="execute"/> with its configured middleware.
+    /// </summary>
     internal delegate Task WorkerMiddlewarePipeline(IServiceProvider serviceProvider, WorkerMiddleware execute, CancellationToken cancellationToken);
 
     /// <summary>
@@ -80,14 +87,17 @@ namespace WorkR.Middleware
             UseMiddleware(sp => new TimeoutMiddleware(sp.GetRequiredService<TimeProvider>(), timeout));
 
         /// <summary>
-        /// Adds middleware that creates an additional dependency injection scope around
-        /// downstream workers. Each pipeline execution already runs in its own scope, so this is
-        /// only needed to nest a further scope.
+        /// Adds middleware that creates a new dependency injection scope around downstream workers.
         /// </summary>
         /// <returns>The same builder, to allow chaining.</returns>
         public WorkerMiddlewarePipelineBuilder UseScope() =>
             UseInternalMiddleware(new ScopeMiddleware());
 
+        /// <summary>
+        /// Adds internal middleware constructed per execution by the supplied factory. Unlike
+        /// <see cref="IWorkerMiddleware"/>, internal middleware can replace the service provider
+        /// flowing downstream (used by <see cref="ScopeMiddleware"/>).
+        /// </summary>
         internal WorkerMiddlewarePipelineBuilder UseInternalMiddleware<TMiddleware>(Func<IServiceProvider, TMiddleware> factory)
             where TMiddleware : IInternalWorkerMiddleware
         {
@@ -102,6 +112,9 @@ namespace WorkR.Middleware
             return this;
         }
 
+        /// <summary>
+        /// Adds a pre-constructed internal middleware instance.
+        /// </summary>
         internal WorkerMiddlewarePipelineBuilder UseInternalMiddleware(IInternalWorkerMiddleware middleware)
         {
             ArgumentNullException.ThrowIfNull(middleware);
@@ -111,6 +124,12 @@ namespace WorkR.Middleware
             return this;
         }
 
+        /// <summary>
+        /// Composes the registered middleware into a single pipeline.
+        /// </summary>
+        /// <remarks>
+        /// Middleware is folded in reverse so the first-registered ends up outermost.
+        /// </remarks>
         internal WorkerMiddlewarePipeline Build()
         {
             var middleware = _middleware.ToArray();

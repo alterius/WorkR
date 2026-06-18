@@ -2,6 +2,9 @@
 
 namespace WorkR.Middleware
 {
+    /// <summary>
+    /// Internal middleware that runs downstream workers within a new dependency injection scope.
+    /// </summary>
     internal sealed class ScopeMiddleware : IInternalWorkerMiddleware
     {
         public async Task ExecuteAsync(IServiceProvider sp, WorkerMiddleware next, CancellationToken cancellationToken)

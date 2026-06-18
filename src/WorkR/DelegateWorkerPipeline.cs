@@ -1,5 +1,8 @@
 namespace WorkR
 {
+    /// <summary>
+    /// An <see cref="INamedWorkerPipeline{TIn}"/> backed by a delegate.
+    /// </summary>
     internal sealed class DelegateWorkerPipeline<TIn> : INamedWorkerPipeline<TIn>
     {
         private readonly string _name;

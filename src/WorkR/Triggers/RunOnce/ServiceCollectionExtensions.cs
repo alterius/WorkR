@@ -6,19 +6,17 @@ using WorkR.Middleware;
 namespace WorkR.Triggers.RunOnce
 {
     /// <summary>
-    /// Extension methods for registering a <see cref="RunOnceTrigger"/>-driven worker pipeline
-    /// that fires once when the host starts.
+    /// Extension methods for registering a <see cref="RunOnceTrigger"/>-driven worker pipeline.
     /// </summary>
     public static class ServiceCollectionExtensions
     {
         /// <summary>
-        /// Registers a worker pipeline driven by a <see cref="RunOnceTrigger"/>, composing the
-        /// pipeline with the supplied configuration callback. Registers
+        /// Registers a worker pipeline driven by a <see cref="RunOnceTrigger"/>. Registers
         /// <see cref="TimeProvider.System"/> if no <see cref="TimeProvider"/> is already present.
         /// </summary>
-        /// <param name="services">The service collection to add the worker service to.</param>
+        /// <param name="services">The service collection.</param>
         /// <param name="builder">A callback that composes the worker pipeline.</param>
-        /// <returns>The same <paramref name="services"/> instance, to allow chaining.</returns>
+        /// <returns>The same <paramref name="services"/> instance.</returns>
         public static IServiceCollection AddRunOnceWorker(
             this IServiceCollection services,
             WorkerRegistration<RunOnceTrigger, EmptyTriggerContext> builder)
@@ -33,17 +31,13 @@ namespace WorkR.Triggers.RunOnce
         }
 
         /// <summary>
-        /// Registers a single terminal worker driven by a <see cref="RunOnceTrigger"/>, firing
-        /// it once when the host starts.
+        /// Registers a single terminal worker driven by a <see cref="RunOnceTrigger"/>.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to run.</typeparam>
-        /// <param name="services">The service collection to add the worker service to.</param>
-        /// <param name="workerLifetime">
-        /// The DI lifetime to register the worker with, defaulting to
-        /// <see cref="ServiceLifetime.Transient"/>.
-        /// </param>
+        /// <param name="services">The service collection.</param>
+        /// <param name="workerLifetime">The lifetime to register the worker with.</param>
         /// <param name="middleware">An optional callback to configure middleware for the worker.</param>
-        /// <returns>The same <paramref name="services"/> instance, to allow chaining.</returns>
+        /// <returns>The same <paramref name="services"/> instance.</returns>
         public static IServiceCollection AddRunOnceWorker<TWorker>(
             this IServiceCollection services,
             ServiceLifetime workerLifetime = ServiceLifetime.Transient,

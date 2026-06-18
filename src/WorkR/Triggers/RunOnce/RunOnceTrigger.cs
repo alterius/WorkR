@@ -3,8 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace WorkR.Triggers.RunOnce
 {
     /// <summary>
-    /// A trigger that fires its worker pipeline exactly once when the host starts, then stops.
-    /// Useful for startup tasks, migrations, or one-off initialisation.
+    /// A trigger that fires its worker pipeline once when the host starts, then stops.
     /// </summary>
     public sealed class RunOnceTrigger : ITrigger<EmptyTriggerContext>
     {
@@ -14,7 +13,7 @@ namespace WorkR.Triggers.RunOnce
         /// <summary>
         /// Initialises a new <see cref="RunOnceTrigger"/>.
         /// </summary>
-        /// <param name="timeProvider">The time provider used to stamp the context's <see cref="TriggerContext.OccurredAt"/>.</param>
+        /// <param name="timeProvider">The time provider used to stamp the context's occurrence time.</param>
         /// <param name="logger">The logger used to record the trigger's lifecycle.</param>
         /// <exception cref="ArgumentNullException">
         /// <paramref name="timeProvider"/> or <paramref name="logger"/> is <see langword="null"/>.

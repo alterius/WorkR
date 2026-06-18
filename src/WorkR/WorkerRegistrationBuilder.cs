@@ -5,24 +5,21 @@ using WorkR.Middleware;
 namespace WorkR
 {
     /// <summary>
-    /// Composes a worker pipeline for a trigger. Implementations add one or more workers to the
-    /// supplied <paramref name="builder"/> and return the completed pipeline builder.
+    /// Composes a worker pipeline for a trigger, returning the completed pipeline builder.
     /// </summary>
-    /// <typeparam name="TTrigger">The trigger type that owns the execution loop.</typeparam>
+    /// <typeparam name="TTrigger">The trigger type.</typeparam>
     /// <typeparam name="TContext">The context type the trigger produces.</typeparam>
-    /// <param name="builder">The registration builder used to add workers to the pipeline.</param>
+    /// <param name="builder">The registration builder used to add workers.</param>
     /// <returns>The pipeline builder produced once the final worker has been added.</returns>
     public delegate WorkerPipelineBuilder<TContext> WorkerRegistration<TTrigger, TContext>(WorkerRegistrationBuilder<TTrigger, TContext> builder)
         where TTrigger : ITrigger<TContext>
         where TContext : TriggerContext;
 
     /// <summary>
-    /// The entry point for composing a worker pipeline. The first worker added receives the
-    /// trigger's <typeparamref name="TContext"/>; adding a transforming worker returns a
-    /// <see cref="WorkerRegistrationBuilder{TTrigger, TContext, TOut}"/> for chaining further
-    /// steps.
+    /// The entry point for composing a worker pipeline, whose first worker receives the trigger's
+    /// <typeparamref name="TContext"/>.
     /// </summary>
-    /// <typeparam name="TTrigger">The trigger type that owns the execution loop.</typeparam>
+    /// <typeparam name="TTrigger">The trigger type.</typeparam>
     /// <typeparam name="TContext">The context type the trigger produces.</typeparam>
     public sealed class WorkerRegistrationBuilder<TTrigger, TContext>
         where TTrigger : ITrigger<TContext>
@@ -41,16 +38,12 @@ namespace WorkR
         }
 
         /// <summary>
-        /// Adds a transforming worker as the first step in the pipeline, registering the worker
-        /// type with the DI container and resolving it per execution.
+        /// Adds a transforming worker as the first step, registered with the DI container and
+        /// resolved per execution.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
         /// <typeparam name="TOut">The value type the worker forwards to the next step.</typeparam>
-        /// <param name="lifetime">
-        /// The DI lifetime to register the worker with, defaulting to
-        /// <see cref="ServiceLifetime.Transient"/>. Pass <see langword="null"/> to skip
-        /// registration if the worker is already registered elsewhere.
-        /// </param>
+        /// <param name="lifetime">The lifetime to register the worker with, or <see langword="null"/> to skip registration.</param>
         /// <param name="middleware">An optional callback to configure middleware for this step.</param>
         /// <returns>A builder for adding the next worker in the chain.</returns>
         public WorkerRegistrationBuilder<TTrigger, TContext, TOut> AddWorker<TWorker, TOut>(
@@ -60,9 +53,8 @@ namespace WorkR
                     _builder.AddWorker<TWorker, TOut>(lifetime, middleware);
 
         /// <summary>
-        /// Adds a transforming worker as the first step in the pipeline, constructed by the
-        /// supplied factory. The worker is not registered with the DI container; the factory is
-        /// invoked once per execution.
+        /// Adds a transforming worker as the first step, constructed by the supplied factory once
+        /// per execution and not registered with the DI container.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
         /// <typeparam name="TOut">The value type the worker forwards to the next step.</typeparam>
@@ -76,15 +68,11 @@ namespace WorkR
                     _builder.AddWorker<TWorker, TOut>(factory, middleware);
 
         /// <summary>
-        /// Adds a terminal worker as the only (or final) step in the pipeline, registering the
-        /// worker type with the DI container and resolving it per execution.
+        /// Adds a terminal worker as the final step, registered with the DI container and
+        /// resolved per execution.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
-        /// <param name="lifetime">
-        /// The DI lifetime to register the worker with, defaulting to
-        /// <see cref="ServiceLifetime.Transient"/>. Pass <see langword="null"/> to skip
-        /// registration if the worker is already registered elsewhere.
-        /// </param>
+        /// <param name="lifetime">The lifetime to register the worker with, or <see langword="null"/> to skip registration.</param>
         /// <param name="middleware">An optional callback to configure middleware for this step.</param>
         /// <returns>The completed pipeline builder.</returns>
         public WorkerPipelineBuilder<TContext> AddWorker<TWorker>(
@@ -94,9 +82,8 @@ namespace WorkR
                     _builder.AddWorker<TWorker>(lifetime, middleware);
 
         /// <summary>
-        /// Adds a terminal worker as the only (or final) step in the pipeline, constructed by
-        /// the supplied factory. The worker is not registered with the DI container; the factory
-        /// is invoked once per execution.
+        /// Adds a terminal worker as the final step, constructed by the supplied factory once per
+        /// execution and not registered with the DI container.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
         /// <param name="factory">A factory that constructs the worker from the execution's service provider.</param>
@@ -110,11 +97,10 @@ namespace WorkR
     }
 
     /// <summary>
-    /// A continuation of <see cref="WorkerRegistrationBuilder{TTrigger, TContext}"/> after a
-    /// transforming worker has been added. The next worker added receives the previous worker's
-    /// output (<typeparamref name="TOut"/>).
+    /// A registration builder whose next worker receives the previous worker's output
+    /// (<typeparamref name="TOut"/>).
     /// </summary>
-    /// <typeparam name="TTrigger">The trigger type that owns the execution loop.</typeparam>
+    /// <typeparam name="TTrigger">The trigger type.</typeparam>
     /// <typeparam name="TContext">The context type the trigger produces.</typeparam>
     /// <typeparam name="TOut">The value type produced by the previously added worker.</typeparam>
     public sealed class WorkerRegistrationBuilder<TTrigger, TContext, TOut>
@@ -136,16 +122,12 @@ namespace WorkR
         }
 
         /// <summary>
-        /// Adds a transforming worker that receives the previous worker's output, registering
-        /// the worker type with the DI container and resolving it per execution.
+        /// Adds a transforming worker that receives the previous worker's output, registered with
+        /// the DI container and resolved per execution.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
         /// <typeparam name="TNext">The value type the worker forwards to the next step.</typeparam>
-        /// <param name="lifetime">
-        /// The DI lifetime to register the worker with, defaulting to
-        /// <see cref="ServiceLifetime.Transient"/>. Pass <see langword="null"/> to skip
-        /// registration if the worker is already registered elsewhere.
-        /// </param>
+        /// <param name="lifetime">The lifetime to register the worker with, or <see langword="null"/> to skip registration.</param>
         /// <param name="middleware">An optional callback to configure middleware for this step.</param>
         /// <returns>A builder for adding the next worker in the chain.</returns>
         public WorkerRegistrationBuilder<TTrigger, TContext, TNext> AddWorker<TWorker, TNext>(
@@ -159,8 +141,7 @@ namespace WorkR
 
         /// <summary>
         /// Adds a transforming worker that receives the previous worker's output, constructed by
-        /// the supplied factory. The worker is not registered with the DI container; the factory
-        /// is invoked once per execution.
+        /// the supplied factory once per execution and not registered with the DI container.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
         /// <typeparam name="TNext">The value type the worker forwards to the next step.</typeparam>
@@ -174,15 +155,11 @@ namespace WorkR
                     Then<TWorker, TNext>(factory, middleware);
 
         /// <summary>
-        /// Adds a terminal worker that receives the previous worker's output, registering the
-        /// worker type with the DI container and resolving it per execution.
+        /// Adds a terminal worker that receives the previous worker's output, registered with the
+        /// DI container and resolved per execution.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
-        /// <param name="lifetime">
-        /// The DI lifetime to register the worker with, defaulting to
-        /// <see cref="ServiceLifetime.Transient"/>. Pass <see langword="null"/> to skip
-        /// registration if the worker is already registered elsewhere.
-        /// </param>
+        /// <param name="lifetime">The lifetime to register the worker with, or <see langword="null"/> to skip registration.</param>
         /// <param name="middleware">An optional callback to configure middleware for this step.</param>
         /// <returns>The completed pipeline builder.</returns>
         public WorkerPipelineBuilder<TContext> AddWorker<TWorker>(
@@ -196,8 +173,7 @@ namespace WorkR
 
         /// <summary>
         /// Adds a terminal worker that receives the previous worker's output, constructed by the
-        /// supplied factory. The worker is not registered with the DI container; the factory is
-        /// invoked once per execution.
+        /// supplied factory once per execution and not registered with the DI container.
         /// </summary>
         /// <typeparam name="TWorker">The worker type to add.</typeparam>
         /// <param name="factory">A factory that constructs the worker from the execution's service provider.</param>
@@ -209,6 +185,10 @@ namespace WorkR
                 where TWorker : IWorker<TOut> =>
                     Finally(factory, middleware);
 
+        /// <summary>
+        /// Adapts a transforming worker into a pipeline stage, binding the worker's
+        /// <c>next</c> continuation to the rest of the pipeline.
+        /// </summary>
         private WorkerRegistrationBuilder<TTrigger, TContext, TNext> Then<TWorker, TNext>(
             Func<IServiceProvider, TWorker> workerFactory,
             Action<WorkerMiddlewarePipelineBuilder>? middleware)
@@ -222,6 +202,9 @@ namespace WorkR
             return new WorkerRegistrationBuilder<TTrigger, TContext, TNext>(_services, builder);
         }
 
+        /// <summary>
+        /// Adapts a terminal worker into the pipeline's final stage.
+        /// </summary>
         private WorkerPipelineBuilder<TContext> Finally<TWorker>(
             Func<IServiceProvider, TWorker> workerFactory,
             Action<WorkerMiddlewarePipelineBuilder>? middleware)

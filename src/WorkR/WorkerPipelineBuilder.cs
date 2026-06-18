@@ -3,15 +3,34 @@ using WorkR.Middleware;
 
 namespace WorkR
 {
+    /// <summary>
+    /// A terminal pipeline stage: runs a worker against a value with no further step.
+    /// </summary>
     internal delegate Task WorkerPipelineStage<in TIn>(IServiceProvider sp, TIn value, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// A transforming pipeline stage: runs a worker and forwards a result via <paramref name="next"/>.
+    /// </summary>
     internal delegate Task WorkerPipelineStage<in TIn, out TOut>(IServiceProvider sp, TIn value, WorkerPipelineStage<TOut> next, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Factory for the internal pipeline builder.
+    /// </summary>
     internal static class WorkerPipelineBuilder
     {
+        /// <summary>
+        /// Creates an empty builder whose seed stage passes the value straight to the next stage.
+        /// </summary>
         internal static WorkerPipelineBuilder<TIn, TIn> Create<TIn>() =>
             new([], static (sp, value, next, ct) => next(sp, value, ct));
     }
 
+    /// <summary>
+    /// Builds a worker pipeline by composing stages, tracking <typeparamref name="TIn"/> (the
+    /// pipeline's input) and <typeparamref name="TOut"/> (the type the next stage receives).
+    /// </summary>
+    /// <typeparam name="TIn">The pipeline's input type.</typeparam>
+    /// <typeparam name="TOut">The value type the next stage will receive.</typeparam>
     internal sealed class WorkerPipelineBuilder<TIn, TOut>
     {
         private readonly IReadOnlyList<string> _workerNames;
@@ -26,6 +45,14 @@ namespace WorkR
             _workerNames = workerNames;
         }
 
+        /// <summary>
+        /// Appends a transforming stage, wrapped in its middleware, and returns a builder
+        /// expecting the next value type.
+        /// </summary>
+        /// <remarks>
+        /// The new stage is nested inside the existing pipeline so stages execute in registration
+        /// order, each running within its own middleware.
+        /// </remarks>
         internal WorkerPipelineBuilder<TIn, TNext> Then<TNext>(
             string name,
             WorkerPipelineStage<TOut, TNext> step,
@@ -45,6 +72,9 @@ namespace WorkR
                         ct));
         }
 
+        /// <summary>
+        /// Appends a terminal stage, wrapped in its middleware, closing the pipeline.
+        /// </summary>
         internal WorkerPipelineBuilder<TIn> Finally(
             string name,
             WorkerPipelineStage<TOut> step,
@@ -64,6 +94,9 @@ namespace WorkR
                         ct));
         }
 
+        /// <summary>
+        /// Builds the middleware pipeline for a stage, or a pass-through when none is configured.
+        /// </summary>
         private static WorkerMiddlewarePipeline WithMiddleware(
             Action<WorkerMiddlewarePipelineBuilder>? middleware)
         {
@@ -79,9 +112,8 @@ namespace WorkR
     }
 
     /// <summary>
-    /// Represents a fully composed worker pipeline that ends in a terminal worker. Returned by
-    /// the registration builder once the final worker has been added; it is consumed internally
-    /// to build the hosted worker service and is not intended to be used directly.
+    /// A fully composed worker pipeline that ends in a terminal worker. Produced by the
+    /// registration builder and consumed internally; not intended to be used directly.
     /// </summary>
     /// <typeparam name="TIn">The input type the pipeline accepts, i.e. the trigger's context type.</typeparam>
     public sealed class WorkerPipelineBuilder<TIn>
@@ -103,6 +135,10 @@ namespace WorkR
             _workerNames = workerNames;
         }
 
+        /// <summary>
+        /// Materialises the composed stages into a runnable pipeline named by joining the worker
+        /// names with <c>" -&gt; "</c>. Each execution runs within its own dependency injection scope.
+        /// </summary>
         internal INamedWorkerPipeline<TIn> Build(IServiceProvider serviceProvider)
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
