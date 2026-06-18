@@ -2,12 +2,29 @@
 
 namespace WorkR.Middleware
 {
+    /// <summary>
+    /// Middleware that catches and logs exceptions of type <typeparamref name="TException"/>
+    /// thrown by downstream workers, preventing a failing execution from propagating. An
+    /// optional predicate narrows which exceptions are handled.
+    /// </summary>
+    /// <typeparam name="TException">The exception type to catch.</typeparam>
     public sealed class ErrorHandlingMiddleware<TException> : IWorkerMiddleware
         where TException : Exception
     {
         private readonly ILogger<ErrorHandlingMiddleware<TException>> _logger;
         private readonly Func<TException, bool>? _predicate;
 
+        /// <summary>
+        /// Initialises a new <see cref="ErrorHandlingMiddleware{TException}"/>.
+        /// </summary>
+        /// <param name="logger">The logger used to record handled exceptions.</param>
+        /// <param name="predicate">
+        /// An optional filter applied to a caught exception. When it returns <see langword="true"/>
+        /// the exception is handled and logged; when it returns <see langword="false"/> the
+        /// exception is rethrown. When <see langword="null"/>, all exceptions of
+        /// <typeparamref name="TException"/> are handled.
+        /// </param>
+        /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <see langword="null"/>.</exception>
         public ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware<TException>> logger, Func<TException, bool>? predicate = null)
         {
             ArgumentNullException.ThrowIfNull(logger);
@@ -16,6 +33,7 @@ namespace WorkR.Middleware
             _predicate = predicate;
         }
 
+        /// <inheritdoc />
         public async Task ExecuteAsync(Func<CancellationToken, Task> next, CancellationToken cancellationToken)
         {
             try

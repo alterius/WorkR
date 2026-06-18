@@ -78,6 +78,12 @@ namespace WorkR
         }
     }
 
+    /// <summary>
+    /// Represents a fully composed worker pipeline that ends in a terminal worker. Returned by
+    /// the registration builder once the final worker has been added; it is consumed internally
+    /// to build the hosted worker service and is not intended to be used directly.
+    /// </summary>
+    /// <typeparam name="TIn">The input type the pipeline accepts, i.e. the trigger's context type.</typeparam>
     public sealed class WorkerPipelineBuilder<TIn>
     {
         private readonly IReadOnlyList<string> _workerNames;
