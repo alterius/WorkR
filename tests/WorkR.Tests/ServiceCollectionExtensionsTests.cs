@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Shouldly;
 
-namespace WorkR.Tests.Registration
+namespace WorkR.Tests
 {
     [Trait("Category", "L0")]
     public class ServiceCollectionExtensionsTests

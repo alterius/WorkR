@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Shouldly;
 
-namespace WorkR.Tests.Hosting
+namespace WorkR.Tests
 {
     [Trait("Category", "L0")]
     public class WorkerServiceTests

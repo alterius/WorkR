@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using WorkR.Middleware;
 
-namespace WorkR.Tests.Pipeline
+namespace WorkR.Tests
 {
     [Trait("Category", "L0")]
     public class WorkerRegistrationBuilderTests

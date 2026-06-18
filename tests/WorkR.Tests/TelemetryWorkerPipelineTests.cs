@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Testing;
 using Shouldly;
 
-namespace WorkR.Tests.Hosting
+namespace WorkR.Tests
 {
     [Trait("Category", "L0")]
     public class TelemetryWorkerPipelineTests

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Shouldly;
 using WorkR.Triggers.RunOnce;
 
-namespace WorkR.Tests.Pipeline
+namespace WorkR.Tests
 {
     [Trait("Category", "L1")]
     public class PipelineCompositionTests
